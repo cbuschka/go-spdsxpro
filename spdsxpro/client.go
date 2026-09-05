@@ -6,6 +6,12 @@ type Client interface {
 	Ping() error
 	Close() error
 	GetActiveKit() (int, error)
+	GetKitList() ([]Kit, error)
+}
+
+type Kit struct {
+	Number int
+	Name   string
 }
 
 func NewClient(portPath string) (Client, error) {

@@ -1,6 +1,7 @@
 package spdsxpro
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"log"
@@ -16,9 +17,13 @@ const (
 
 	CmdRQ1 = 0x11 // Request Data 1
 	CmdDT1 = 0x12 // Data Set 1 (Response/Write)
+
+	TotalKits = 200 // SPD-SX PRO supports 200 kits
+	// SPD-SX PRO Kit Name is 12 bytes long in memory
+	KitNameLength = 12
 )
 
-// SPD-SX PRO 5-byte Model ID verified from hardware output
+// ModelIDSPDSXPro SPD-SX PRO 5-byte Model ID verified from hardware output
 var ModelIDSPDSXPro = []byte{0x00, 0x00, 0x00, 0x00, 0x16}
 
 // computeRolandChecksum calculates the Roland 7-bit checksum:
@@ -153,25 +158,23 @@ func verifyResponse(resp []byte) error {
 	return nil
 }
 
-// readSysEx reads from an os.File using deadlines, assembling a full SysEx message (0xF0...0xF7)
 func (c *linuxMidiClient) readSysEx() ([]byte, error) {
 	_ = c.dev.SetReadDeadline(time.Now().Add(c.timeout))
 	defer c.dev.SetReadDeadline(time.Time{})
 
 	var buf []byte
 	inSysEx := false
-	tmp := make([]byte, 128)
+	tmp := make([]byte, 256)
 
 	for {
 		n, err := c.dev.Read(tmp)
 		if err != nil {
-			return nil, fmt.Errorf("read error/timeout: %w", err)
+			return nil, fmt.Errorf("read timeout/error: %w", err)
 		}
 
 		for i := 0; i < n; i++ {
 			b := tmp[i]
 
-			// Skip MIDI Realtime status bytes (Active Sensing 0xFE, Timing Clock 0xF8, etc.)
 			if b >= 0xF8 && b != RolandEOXByte {
 				continue
 			}
@@ -189,26 +192,24 @@ func (c *linuxMidiClient) readSysEx() ([]byte, error) {
 	}
 }
 
-// TransceiveSysEx flushes stale data, writes the message, and uses readSysEx to capture the response
 func (c *linuxMidiClient) TransceiveSysEx(msg []byte) ([]byte, error) {
-	// Flush stale bytes in input buffer
-	_ = c.dev.SetReadDeadline(time.Now().Add(c.timeout))
+	// Drain lingering incoming bytes with a quick 5ms deadline
+	_ = c.dev.SetReadDeadline(time.Now().Add(5 * time.Millisecond))
 	discard := make([]byte, 256)
 	for {
-		n, _ := c.dev.Read(discard)
-		if n == 0 {
+		n, err := c.dev.Read(discard)
+		if n == 0 || err != nil {
 			break
 		}
 	}
 
-	// Write SysEx command
 	if _, err := c.dev.Write(msg); err != nil {
 		return nil, fmt.Errorf("write error: %w", err)
 	}
 
-	// Read returning SysEx payload via ReadSysEx
 	return c.readSysEx()
 }
+
 func (c *linuxMidiClient) GetActiveKit() (int, error) {
 	// Address: Current Kit Number (0x00, 0x00, 0x00, 0x00)
 	addr := [4]byte{0x00, 0x00, 0x00, 0x00}
@@ -231,4 +232,89 @@ func (c *linuxMidiClient) GetActiveKit() (int, error) {
 	}
 
 	return kitNum, nil
+}
+
+func parseKitNameResponse(resp []byte) (string, error) {
+	minLen := 3 + len(ModelIDSPDSXPro) + 1 + 4 + 1 + 1
+	if len(resp) < minLen {
+		return "", fmt.Errorf("payload short (%d bytes)", len(resp))
+	}
+
+	if resp[0] != RolandHeaderByte || resp[len(resp)-1] != RolandEOXByte {
+		return "", errors.New("invalid framing")
+	}
+
+	cmdIdx := 3 + len(ModelIDSPDSXPro)
+	if resp[cmdIdx] != CmdDT1 {
+		return "", fmt.Errorf("expected DT1 (0x12), got 0x%02X", resp[cmdIdx])
+	}
+
+	checksumIdx := len(resp) - 2
+	payloadForChecksum := resp[cmdIdx+1 : checksumIdx]
+	if computeRolandChecksum(payloadForChecksum) != resp[checksumIdx] {
+		return "", errors.New("checksum mismatch")
+	}
+
+	// Data payload is between address (4 bytes) and checksum
+	dataBytes := resp[cmdIdx+5 : checksumIdx]
+	return cleanASCII(dataBytes), nil
+}
+
+func cleanASCII(b []byte) string {
+	var out []byte
+	for _, c := range b {
+		if c >= 32 && c <= 126 { // Printable ASCII range
+			out = append(out, c)
+		}
+	}
+	return string(bytes.TrimSpace(out))
+}
+
+// getKitNameAddress computes the 4-byte Roland address for Kit N (1-indexed: 1..200)
+func (c *linuxMidiClient) getKitNameAddress(kitNum int) [4]byte {
+	idx := kitNum - 1 // 0-based index
+
+	// Each kit increments Byte 2 by 0x02
+	stride := idx * 2
+
+	b1 := byte(0x04 + (stride / 128)) // Carry over to B1 after 64 kits
+	b2 := byte(stride % 128)          // B2 steps by 0x02 per kit
+	b3 := byte(0x00)
+	b4 := byte(0x00) // Kit Name sub-offset
+
+	return [4]byte{b1, b2, b3, b4}
+}
+func (c *linuxMidiClient) GetKitList() ([]Kit, error) {
+	var kits []Kit
+	size := [4]byte{0x00, 0x00, 0x00, byte(KitNameLength)}
+
+	for i := 1; i <= TotalKits; i++ {
+		addr := c.getKitNameAddress(i)
+		rq1Query := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+
+		resp, err := c.TransceiveSysEx(rq1Query)
+		if err != nil {
+			log.Printf("Stopped at kit %d: %v", i, err)
+			break
+		}
+
+		name, err := parseKitNameResponse(resp)
+		if err != nil {
+			log.Printf("Failed to parse kit %d: %v", i, err)
+			continue
+		}
+
+		if name == "" {
+			name = "<Empty>"
+		}
+
+		kits = append(kits, Kit{
+			Number: i,
+			Name:   name,
+		})
+
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	return kits, nil
 }

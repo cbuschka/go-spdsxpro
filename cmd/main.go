@@ -32,4 +32,14 @@ func main() {
 	}
 	fmt.Printf("active kit %d\n", kit)
 
+	kits, err := client.GetKitList()
+	if err != nil {
+		log.Fatalf("Error fetching kit list: %v", err)
+	}
+
+	for idx, kit := range kits {
+		fmt.Printf("kit %d: %s\n", idx, kit.Name)
+
+	}
+
 }
