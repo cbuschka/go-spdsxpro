@@ -1,11 +1,20 @@
 package types
 
+type PadLayer int
+
+const (
+	LayerA PadLayer = 0x40
+	LayerB PadLayer = 0x41
+)
+
 type Client interface {
 	Ping() error
 	Close() error
 	GetActiveKit() (int, error)
 	GetKitList() ([]Kit, error)
 	GetSetlistList() ([]Setlist, error)
+	GetPadLayerVolume(kitIdx int, padIdx int, layer PadLayer) (int, error)
+	SetPadLayerVolume(kitIdx int, padIdx int, layer PadLayer, value int) error
 }
 
 type Kit struct {

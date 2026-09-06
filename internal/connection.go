@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
 	"go-spdsxpro/internal/log"
 	"os"
@@ -94,11 +95,39 @@ func (c *Connection) TransceiveSysEx(msg []byte) ([]byte, error) {
 
 	log.Debugf("sending msg: %X", msg)
 
+	_ = c.dev.SetWriteDeadline(time.Now().Add(c.timeout))
 	if _, err := c.dev.Write(msg); err != nil {
 		return nil, fmt.Errorf("write error: %w", err)
 	}
 
 	return c.readSysEx()
+}
+
+// SendSysEx validates and transmits a SysEx byte slice to the MIDI device.
+func (conn *Connection) sendSysEx(msg []byte) error {
+	if len(msg) < 4 {
+		return errors.New("sysex message too short")
+	}
+
+	// 1. Verify basic SysEx framing
+	if msg[0] != RolandHeaderByte {
+		return fmt.Errorf("invalid header byte: expected 0xF0, got 0x%02X", msg[0])
+	}
+	if msg[len(msg)-1] != RolandEOXByte {
+		return fmt.Errorf("invalid end byte: expected 0xF7, got 0x%02X", msg[len(msg)-1])
+	}
+
+	// 2. Write bytes out to the MIDI transport
+	n, err := conn.dev.Write(msg)
+	if err != nil {
+		return fmt.Errorf("failed to write SysEx to MIDI port: %w", err)
+	}
+
+	if n != len(msg) {
+		return fmt.Errorf("short write: wrote %d of %d bytes", n, len(msg))
+	}
+
+	return nil
 }
 
 func (c *Connection) verifyResponse(resp []byte) error {
@@ -143,4 +172,23 @@ func (c *Connection) Close() error {
 	}()
 
 	return nil
+}
+
+// BuildRolandDT1 creates a Roland Data Set 1 (DT1) SysEx message []byte.
+// deviceID: typically 0x10 (17 decimal)
+// modelID: slice of bytes defining the device model (e.g., []byte{0x00, 0x00, 0x00, 0x??})
+// address: 4-byte target memory address []byte
+// data: payload bytes to write
+func (c *Connection) encodeDT1(deviceID byte, modelID []byte, addr [4]byte, data []byte) []byte {
+	// FIXME handle data too large
+	msg := []byte{RolandHeaderByte, RolandVendorID, deviceID}
+	msg = append(msg, modelID...)
+	msg = append(msg, CmdDT1)
+
+	payload := append(addr[:], data[:]...)
+	checksum := c.computeRolandChecksum(payload)
+
+	msg = append(msg, payload...)
+	msg = append(msg, checksum, RolandEOXByte)
+	return msg
 }

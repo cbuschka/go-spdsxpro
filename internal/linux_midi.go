@@ -396,3 +396,85 @@ func (c *linuxMidiClient) getSetlistStepsAddress(setlistNum int) [4]byte {
 	addr[3] = 0x10 // Step offset is 0x10 relative to the setlist base address
 	return addr
 }
+
+// getPadParamAddress constructs the 4-byte Roland address.
+func (c *linuxMidiClient) getPadParamAddress(kitIdx int, padIdx int, layer types.PadLayer, subAddrB4 byte) [4]byte {
+	// Kit Base Offset (Bytes 1 & 2)
+	kitStride := kitIdx * 2
+	b1 := byte(0x04 + (kitStride / 128))
+	b2 := byte(kitStride % 128)
+
+	// Pad & Layer Offset (Bytes 3 & 4)
+	// Each Pad strides by 0x0200 (Pad 1: 0x40/0x41, Pad 2: 0x42/0x43, etc.)
+	b3 := byte(layer) + byte(padIdx*2)
+	b4 := subAddrB4
+
+	return [4]byte{b1, b2, b3, b4}
+}
+
+// GetPadLayerVolume fetches volume for a specific layer on a pad.
+func (c *linuxMidiClient) GetPadLayerVolume(kitIdx int, padIdx int, layer types.PadLayer) (int, error) {
+	// Sub-address 0x05 holds volume within the layer block
+	addr := c.getPadParamAddress(kitIdx, padIdx, layer, 0x05)
+
+	size := [4]byte{0x00, 0x00, 0x00, 0x04}
+	rq1Query := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+
+	resp, err := c.conn.TransceiveSysEx(rq1Query)
+	if err != nil {
+		return 0, fmt.Errorf("failed to query pad volume: %w", err)
+	}
+
+	return c.extractVolumeFromDT1(resp)
+}
+
+// extractVolumeFromDT1 parses 4-nibble signed integer payloads.
+func (c *linuxMidiClient) extractVolumeFromDT1(resp []byte) (int, error) {
+	minLen := 3 + len(ModelIDSPDSXPro) + 1 + 4 + 1 + 1 + 1
+	if len(resp) < minLen {
+		return 0, fmt.Errorf("payload short (%d bytes)", len(resp))
+	}
+
+	cmdIdx := 3 + len(ModelIDSPDSXPro)
+	addrIdx := cmdIdx + 1
+	dataStart := addrIdx + 4
+	checksumIdx := len(resp) - 2
+
+	dataBytes := resp[dataStart:checksumIdx]
+	if len(dataBytes) < 4 {
+		return 0, fmt.Errorf("expected 4 data bytes, got %d", len(dataBytes))
+	}
+
+	// Reconstruct unsigned 16-bit integer from 4 nibbles
+	rawVal := (int(dataBytes[0]&0x0F) << 12) |
+		(int(dataBytes[1]&0x0F) << 8) |
+		(int(dataBytes[2]&0x0F) << 4) |
+		int(dataBytes[3]&0x0F)
+
+	// Handle 16-bit signed negative values (2's complement extension)
+	if rawVal&0x8000 != 0 {
+		rawVal = rawVal - 0x10000
+	}
+
+	return rawVal, nil
+}
+
+func (c *linuxMidiClient) SetPadLayerVolume(kitIdx int, padIdx int, layer types.PadLayer, rawVal int) error {
+	addr := c.getPadParamAddress(kitIdx, padIdx, layer, 0x05)
+
+	// Ensure 16-bit range
+	if rawVal < 0 {
+		rawVal = rawVal + 0x10000
+	}
+
+	// Split into 4 Roland 7-bit nibbles
+	data := []byte{
+		byte((rawVal >> 12) & 0x0F),
+		byte((rawVal >> 8) & 0x0F),
+		byte((rawVal >> 4) & 0x0F),
+		byte(rawVal & 0x0F),
+	}
+
+	dt1Msg := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
+	return c.conn.sendSysEx(dt1Msg)
+}
