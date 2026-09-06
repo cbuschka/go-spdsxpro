@@ -14,6 +14,8 @@ const (
 	RolandEOXByte    = 0xF7
 	RolandVendorID   = 0x41
 	DeviceIDAll      = 0x10 // Default Roland Device ID (Base 17 / 0x10)
+	// Device IDs
+	DefaultDeviceID byte = 0x10
 
 	CmdRQ1 = 0x11 // Request Data 1
 	CmdDT1 = 0x12 // Data Set 1 (Response/Write)
@@ -21,7 +23,14 @@ const (
 	TotalKits = 200 // SPD-SX PRO supports 200 kits
 	// SPD-SX PRO Kit Name is 12 bytes long in memory
 	KitNameLength = 12
+
+	// Roland ID is 0x41
+	rolandVendorID = 0x41
 )
+
+// Universal Non-Realtime SysEx Identity Request (Ping)
+// Header: 0xF0, Non-Realtime ID: 0x7E, Target Device ID: 0x7F (All Call), General Info: 0x06, Identity Request: 0x01, EOX: 0xF7
+var sysExPing = []byte{0xF0, 0x7E, 0x7F, 0x06, 0x01, 0xF7}
 
 // ModelIDSPDSXPro SPD-SX PRO 5-byte Model ID verified from hardware output
 var ModelIDSPDSXPro = []byte{0x00, 0x00, 0x00, 0x00, 0x16}
@@ -88,13 +97,6 @@ type linuxMidiClient struct {
 	dev      *os.File
 	timeout  time.Duration
 }
-
-// Universal Non-Realtime SysEx Identity Request (Ping)
-// Header: 0xF0, Non-Realtime ID: 0x7E, Target Device ID: 0x7F (All Call), General Info: 0x06, Identity Request: 0x01, EOX: 0xF7
-var sysExPing = []byte{0xF0, 0x7E, 0x7F, 0x06, 0x01, 0xF7}
-
-// Roland ID is 0x41
-const rolandVendorID = 0x41
 
 func (c *linuxMidiClient) Connect() error {
 	dev, err := os.OpenFile(c.path, os.O_RDWR, 0)
@@ -189,6 +191,8 @@ func (c *linuxMidiClient) readSysEx() ([]byte, error) {
 				if inSysEx {
 					buf = append(buf, b)
 					if b == RolandEOXByte {
+						log.Printf("received msg (%d bytes): %X", len(buf), buf)
+
 						return buf, nil
 					}
 				} else {
@@ -210,6 +214,8 @@ func (c *linuxMidiClient) TransceiveSysEx(msg []byte) ([]byte, error) {
 		}
 	}
 
+	log.Printf("sending msg: %X", msg)
+
 	if _, err := c.dev.Write(msg); err != nil {
 		return nil, fmt.Errorf("write error: %w", err)
 	}
@@ -224,14 +230,11 @@ func (c *linuxMidiClient) GetActiveKit() (int, error) {
 	// MUST request 4 bytes to match the 4-nibble DT1 payload returned by SPD-SX PRO
 	size := [4]byte{0x00, 0x00, 0x00, 0x04}
 	rq1Query := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
-	fmt.Printf("Sending Active Kit RQ1 Query: %X\n", rq1Query)
 
 	resp, err := c.TransceiveSysEx(rq1Query)
 	if err != nil {
 		log.Fatalf("Failed to query active kit: %v", err)
 	}
-
-	fmt.Printf("Received Response (%d bytes): %X\n", len(resp), resp)
 
 	kitNum, err := parseActiveKitResponse(resp)
 	if err != nil {

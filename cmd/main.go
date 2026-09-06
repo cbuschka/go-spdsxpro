@@ -15,7 +15,7 @@ func main() {
 	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	fmt.Println("Attempting to connect to SPD-SX PRO...")
+	log.Printf("Attempting to connect to SPD-SX PRO...")
 
 	// This MUST fail if no device is connected
 	client, err := spdsxpro.NewClient("/dev/snd/midiC1D0")
@@ -24,13 +24,14 @@ func main() {
 	}
 	defer client.Close()
 
-	fmt.Printf("connected\n")
+	log.Printf("connected")
+
 	var kit int
 	kit, err = client.GetActiveKit()
 	if err != nil {
 		log.Fatalf("Error fetching active kit: %v", err)
 	}
-	fmt.Printf("active kit %d\n", kit)
+	fmt.Printf("active kit %d\n", kit+1)
 
 	kits, err := client.GetKitList()
 	if err != nil {
