@@ -38,8 +38,7 @@ func main() {
 	}
 
 	for idx, kit := range kits {
-		fmt.Printf("kit %d: %s\n", idx, kit.Name)
-
+		fmt.Printf("kit %d: %s\n", idx+1, kit.Name)
 	}
 
 }

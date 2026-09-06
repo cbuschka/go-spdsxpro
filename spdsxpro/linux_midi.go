@@ -169,7 +169,7 @@ func (c *linuxMidiClient) readSysEx() ([]byte, error) {
 	for {
 		n, err := c.dev.Read(tmp)
 		if err != nil {
-			return nil, fmt.Errorf("read timeout/error: %w", err)
+			return nil, fmt.Errorf("read timeout or error: %w", err)
 		}
 
 		for i := 0; i < n; i++ {
@@ -180,12 +180,19 @@ func (c *linuxMidiClient) readSysEx() ([]byte, error) {
 			}
 
 			if b == RolandHeaderByte {
+				if inSysEx {
+					return nil, fmt.Errorf("new header while in sysex")
+				}
 				inSysEx = true
 				buf = []byte{b}
-			} else if inSysEx {
-				buf = append(buf, b)
-				if b == RolandEOXByte {
-					return buf, nil
+			} else {
+				if inSysEx {
+					buf = append(buf, b)
+					if b == RolandEOXByte {
+						return buf, nil
+					}
+				} else {
+					// skipped
 				}
 			}
 		}
