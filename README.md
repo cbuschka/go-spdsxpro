@@ -1,4 +1,4 @@
-# go-spedsxpro
+# go-spdsxpro
 
 ### A go module to access the Roland SPD SX Pro from linux
 
