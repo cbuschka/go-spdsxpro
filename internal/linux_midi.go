@@ -1,9 +1,10 @@
-package spdsxpro
+package internal
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
+	"go-spdsxpro/types"
 	"log"
 	"os"
 	"time"
@@ -320,8 +321,8 @@ func (c *linuxMidiClient) getKitNameAddress(kitNum int) [4]byte {
 	return [4]byte{b1, b2, b3, b4}
 }
 
-func (c *linuxMidiClient) GetKitList() ([]Kit, error) {
-	var kits []Kit
+func (c *linuxMidiClient) GetKitList() ([]types.Kit, error) {
+	var kits []types.Kit
 	// Request 44 bytes total (12 bytes Name + 32 bytes SubTitle)
 	size := [4]byte{0x00, 0x00, 0x00, byte(KitBlockLength)}
 
@@ -345,7 +346,7 @@ func (c *linuxMidiClient) GetKitList() ([]Kit, error) {
 			name = "<Empty>"
 		}
 
-		kits = append(kits, Kit{
+		kits = append(kits, types.Kit{
 			Number:   i,
 			Name:     name,
 			SubTitle: subTitle,
@@ -358,8 +359,8 @@ func (c *linuxMidiClient) GetKitList() ([]Kit, error) {
 }
 
 // GetSetlists queries and returns all available setlists
-func (c *linuxMidiClient) GetSetlistList() ([]Setlist, error) {
-	var setlists []Setlist
+func (c *linuxMidiClient) GetSetlistList() ([]types.Setlist, error) {
+	var setlists []types.Setlist
 
 	for i := 1; i <= TotalSetlists; i++ {
 		setlist, err := c.GetSetlist(i)
@@ -375,7 +376,7 @@ func (c *linuxMidiClient) GetSetlistList() ([]Setlist, error) {
 	return setlists, nil
 }
 
-func (c *linuxMidiClient) GetSetlist(setlistNum int) (*Setlist, error) {
+func (c *linuxMidiClient) GetSetlist(setlistNum int) (*types.Setlist, error) {
 	if setlistNum < 1 || setlistNum > TotalSetlists {
 		return nil, fmt.Errorf("setlist ID out of bounds (1..%d)", TotalSetlists)
 	}
@@ -410,7 +411,7 @@ func (c *linuxMidiClient) GetSetlist(setlistNum int) (*Setlist, error) {
 		return nil, fmt.Errorf("failed to parse setlist %d steps: %w", setlistNum, err)
 	}
 
-	return &Setlist{
+	return &types.Setlist{
 		ID:    setlistNum,
 		Name:  name,
 		Steps: steps,
@@ -418,7 +419,7 @@ func (c *linuxMidiClient) GetSetlist(setlistNum int) (*Setlist, error) {
 }
 
 // parseSetlistSteps decodes 4-nibble encoded 16-bit kit numbers from the step payload
-func parseSetlistSteps(resp []byte) ([]SetlistStep, error) {
+func parseSetlistSteps(resp []byte) ([]types.SetlistStep, error) {
 	minLen := 3 + len(ModelIDSPDSXPro) + 1 + 4 + 1 + 1
 	if len(resp) < minLen {
 		return nil, fmt.Errorf("payload short (%d bytes)", len(resp))
@@ -436,7 +437,7 @@ func parseSetlistSteps(resp []byte) ([]SetlistStep, error) {
 
 	stepPayload := dataBytes[stepHeaderOffset:]
 
-	var steps []SetlistStep
+	var steps []types.SetlistStep
 
 	// Each Kit ID is encoded as 4 nibble bytes: [d0, d1, d2, d3]
 	for i := 0; i+3 < len(stepPayload); i += 4 {
@@ -448,7 +449,7 @@ func parseSetlistSteps(resp []byte) ([]SetlistStep, error) {
 			int(stepPayload[i+3])
 
 		if kitID > 0 && kitID <= TotalKits {
-			steps = append(steps, SetlistStep{
+			steps = append(steps, types.SetlistStep{
 				StepNumber: hardwareStepNum,
 				KitNumber:  kitID,
 			})

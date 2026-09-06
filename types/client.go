@@ -1,6 +1,4 @@
-package spdsxpro
-
-import "time"
+package types
 
 type Client interface {
 	Ping() error
@@ -25,13 +23,4 @@ type Setlist struct {
 	ID    int           // Setlist 1..32
 	Name  string        // 12-char Name
 	Steps []SetlistStep // Array of kit entries assigned to this setlist
-}
-
-func NewClient(portPath string) (Client, error) {
-	c := &linuxMidiClient{path: portPath, deviceID: DefaultDeviceID, timeout: 2 * time.Second}
-	err := c.Connect()
-	if err != nil {
-		return nil, err
-	}
-	return c, nil
 }

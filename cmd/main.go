@@ -6,7 +6,8 @@ import (
 	"log"
 	"time"
 
-	"go-spdsxpro/spdsxpro"
+	"go-spdsxpro"
+	"go-spdsxpro/types"
 )
 
 func main() {
@@ -45,7 +46,7 @@ func main() {
 
 }
 
-func dumpKitList(client spdsxpro.Client) error {
+func dumpKitList(client types.Client) error {
 	var err error
 	kits, err := client.GetKitList()
 	if err != nil {
@@ -59,7 +60,7 @@ func dumpKitList(client spdsxpro.Client) error {
 	return nil
 }
 
-func dumpActiveKit(client spdsxpro.Client) error {
+func dumpActiveKit(client types.Client) error {
 	var err error
 	var kit int
 	kit, err = client.GetActiveKit()
@@ -70,7 +71,7 @@ func dumpActiveKit(client spdsxpro.Client) error {
 	return nil
 }
 
-func dumpSetList(client spdsxpro.Client) error {
+func dumpSetList(client types.Client) error {
 	var err error
 	sets, err := client.GetSetlistList()
 	if err != nil {
