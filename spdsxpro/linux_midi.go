@@ -21,8 +21,11 @@ const (
 	CmdDT1 = 0x12 // Data Set 1 (Response/Write)
 
 	TotalKits = 200 // SPD-SX PRO supports 200 kits
-	// SPD-SX PRO Kit Name is 12 bytes long in memory
-	KitNameLength = 12
+
+	// SPD-SX PRO Kit Name is 16 characters long, which requires 32 nibble bytes in SysEx
+	KitNameLength     = 16
+	KitSubTitleLength = 32
+	KitBlockLength    = KitNameLength + KitSubTitleLength // 44 bytes (0x2C)
 
 	// Roland ID is 0x41
 	rolandVendorID = 0x41
@@ -244,30 +247,48 @@ func (c *linuxMidiClient) GetActiveKit() (int, error) {
 	return kitNum, nil
 }
 
-func parseKitNameResponse(resp []byte) (string, error) {
+func parseKitNameResponse(resp []byte) (string, string, error) {
 	minLen := 3 + len(ModelIDSPDSXPro) + 1 + 4 + 1 + 1
 	if len(resp) < minLen {
-		return "", fmt.Errorf("payload short (%d bytes)", len(resp))
+		return "", "", fmt.Errorf("payload short (%d bytes)", len(resp))
 	}
 
 	if resp[0] != RolandHeaderByte || resp[len(resp)-1] != RolandEOXByte {
-		return "", errors.New("invalid framing")
+		return "", "", errors.New("invalid framing")
 	}
 
 	cmdIdx := 3 + len(ModelIDSPDSXPro)
 	if resp[cmdIdx] != CmdDT1 {
-		return "", fmt.Errorf("expected DT1 (0x12), got 0x%02X", resp[cmdIdx])
+		return "", "", fmt.Errorf("expected DT1 (0x12), got 0x%02X", resp[cmdIdx])
 	}
 
 	checksumIdx := len(resp) - 2
 	payloadForChecksum := resp[cmdIdx+1 : checksumIdx]
 	if computeRolandChecksum(payloadForChecksum) != resp[checksumIdx] {
-		return "", errors.New("checksum mismatch")
+		return "", "", errors.New("checksum mismatch")
 	}
 
-	// Data payload is between address (4 bytes) and checksum
+	// Data payload sits between 4-byte address and 1-byte checksum
 	dataBytes := resp[cmdIdx+5 : checksumIdx]
-	return cleanASCII(dataBytes), nil
+
+	if len(dataBytes) < KitNameLength {
+		return "", "", fmt.Errorf("expected at least %d data bytes, got %d", KitNameLength, len(dataBytes))
+	}
+
+	// Extract Kit Name (First 12 bytes)
+	name := cleanASCII(dataBytes[:KitNameLength])
+
+	// Extract Subtitle (Remaining bytes up to offset 44)
+	var subTitle string
+	if len(dataBytes) > KitNameLength {
+		endIdx := len(dataBytes)
+		if endIdx > KitBlockLength {
+			endIdx = KitBlockLength
+		}
+		subTitle = cleanASCII(dataBytes[KitNameLength:endIdx])
+	}
+
+	return name, subTitle, nil
 }
 
 func cleanASCII(b []byte) string {
@@ -294,9 +315,11 @@ func (c *linuxMidiClient) getKitNameAddress(kitNum int) [4]byte {
 
 	return [4]byte{b1, b2, b3, b4}
 }
+
 func (c *linuxMidiClient) GetKitList() ([]Kit, error) {
 	var kits []Kit
-	size := [4]byte{0x00, 0x00, 0x00, byte(KitNameLength)}
+	// Request 44 bytes total (12 bytes Name + 32 bytes SubTitle)
+	size := [4]byte{0x00, 0x00, 0x00, byte(KitBlockLength)}
 
 	for i := 1; i <= TotalKits; i++ {
 		addr := c.getKitNameAddress(i)
@@ -308,7 +331,7 @@ func (c *linuxMidiClient) GetKitList() ([]Kit, error) {
 			break
 		}
 
-		name, err := parseKitNameResponse(resp)
+		name, subTitle, err := parseKitNameResponse(resp)
 		if err != nil {
 			log.Printf("Failed to parse kit %d: %v", i, err)
 			continue
@@ -319,8 +342,9 @@ func (c *linuxMidiClient) GetKitList() ([]Kit, error) {
 		}
 
 		kits = append(kits, Kit{
-			Number: i,
-			Name:   name,
+			Number:   i,
+			Name:     name,
+			SubTitle: subTitle,
 		})
 
 		time.Sleep(10 * time.Millisecond)

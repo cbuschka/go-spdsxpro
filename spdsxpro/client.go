@@ -10,8 +10,9 @@ type Client interface {
 }
 
 type Kit struct {
-	Number int
-	Name   string
+	Number   int
+	Name     string
+	SubTitle string
 }
 
 func NewClient(portPath string) (Client, error) {
