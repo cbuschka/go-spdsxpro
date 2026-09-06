@@ -29,6 +29,10 @@ const (
 
 	// Roland ID is 0x41
 	rolandVendorID = 0x41
+
+	TotalSetlists     = 32 // SPD-SX PRO supports up to 32 Setlists
+	SetlistNameLength = 12 // Setlist Name is 12 ASCII bytes
+	SetlistMaxSteps   = 32 // Up to 32 kit steps per setlist
 )
 
 // Universal Non-Realtime SysEx Identity Request (Ping)
@@ -351,4 +355,168 @@ func (c *linuxMidiClient) GetKitList() ([]Kit, error) {
 	}
 
 	return kits, nil
+}
+
+// GetSetlists queries and returns all available setlists
+func (c *linuxMidiClient) GetSetlistList() ([]Setlist, error) {
+	var setlists []Setlist
+
+	for i := 1; i <= TotalSetlists; i++ {
+		setlist, err := c.GetSetlist(i)
+		if err != nil {
+			log.Printf("Error fetching setlist %d: %v", i, err)
+			continue
+		}
+
+		setlists = append(setlists, *setlist)
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	return setlists, nil
+}
+
+func (c *linuxMidiClient) GetSetlist(setlistNum int) (*Setlist, error) {
+	if setlistNum < 1 || setlistNum > TotalSetlists {
+		return nil, fmt.Errorf("setlist ID out of bounds (1..%d)", TotalSetlists)
+	}
+
+	// 1. Query Setlist Name (12 bytes at sub-offset 0x00)
+	nameAddr := c.getSetlistAddress(setlistNum)
+	nameSize := [4]byte{0x00, 0x00, 0x00, 0x18}
+	rq1Name := encodeRQ1(c.deviceID, ModelIDSPDSXPro, nameAddr, nameSize)
+
+	respName, err := c.TransceiveSysEx(rq1Name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query setlist %d name: %w", setlistNum, err)
+	}
+
+	name, err := parseSetNameResponse(respName)
+	if err != nil {
+		return nil, fmt.Errorf("parsing setlist %d name failed: %w", setlistNum, err)
+	}
+
+	// 2. Query Setlist Kit Steps (32 steps * 4 bytes = 128 bytes at sub-offset B4 = 0x10)
+	stepsAddr := c.getSetlistStepsAddress(setlistNum)
+	stepsSize := [4]byte{0x00, 0x00, 0x01, 0x00}
+	rq1Steps := encodeRQ1(c.deviceID, ModelIDSPDSXPro, stepsAddr, stepsSize)
+
+	respSteps, err := c.TransceiveSysEx(rq1Steps)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query setlist %d steps: %w", setlistNum, err)
+	}
+
+	steps, err := parseSetlistSteps(respSteps)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse setlist %d steps: %w", setlistNum, err)
+	}
+
+	return &Setlist{
+		ID:    setlistNum,
+		Name:  name,
+		Steps: steps,
+	}, nil
+}
+
+// parseSetlistSteps decodes 4-nibble encoded 16-bit kit numbers from the step payload
+func parseSetlistSteps(resp []byte) ([]SetlistStep, error) {
+	minLen := 3 + len(ModelIDSPDSXPro) + 1 + 4 + 1 + 1
+	if len(resp) < minLen {
+		return nil, fmt.Errorf("payload short (%d bytes)", len(resp))
+	}
+
+	cmdIdx := 3 + len(ModelIDSPDSXPro)
+	checksumIdx := len(resp) - 2
+	dataBytes := resp[cmdIdx+5 : checksumIdx]
+
+	// 16-byte header offset (4 metadata slots of 4 nibbles each)
+	const stepHeaderOffset = 16
+	if len(dataBytes) < stepHeaderOffset {
+		return nil, fmt.Errorf("payload too short for step header (got %d bytes)", len(dataBytes))
+	}
+
+	stepPayload := dataBytes[stepHeaderOffset:]
+
+	var steps []SetlistStep
+
+	// Each Kit ID is encoded as 4 nibble bytes: [d0, d1, d2, d3]
+	for i := 0; i+3 < len(stepPayload); i += 4 {
+		hardwareStepNum := (i / 4)
+
+		kitID := (int(stepPayload[i]) << 12) |
+			(int(stepPayload[i+1]) << 8) |
+			(int(stepPayload[i+2]) << 4) |
+			int(stepPayload[i+3])
+
+		if kitID > 0 && kitID <= TotalKits {
+			steps = append(steps, SetlistStep{
+				StepNumber: hardwareStepNum,
+				KitNumber:  kitID,
+			})
+		}
+	}
+
+	return steps, nil
+}
+
+// parseSetNameResponse extracts the nibble-encoded Setlist name from a DT1 SysEx response
+func parseSetNameResponse(resp []byte) (string, error) {
+	minLen := 3 + len(ModelIDSPDSXPro) + 1 + 4 + 1 + 1
+	if len(resp) < minLen {
+		return "", fmt.Errorf("payload short (%d bytes)", len(resp))
+	}
+
+	if resp[0] != RolandHeaderByte || resp[len(resp)-1] != RolandEOXByte {
+		return "", errors.New("invalid framing")
+	}
+
+	cmdIdx := 3 + len(ModelIDSPDSXPro)
+	if resp[cmdIdx] != CmdDT1 {
+		return "", fmt.Errorf("expected DT1 (0x12), got 0x%02X", resp[cmdIdx])
+	}
+
+	checksumIdx := len(resp) - 2
+	payloadForChecksum := resp[cmdIdx+1 : checksumIdx]
+	if computeRolandChecksum(payloadForChecksum) != resp[checksumIdx] {
+		return "", errors.New("checksum mismatch")
+	}
+
+	// Data payload sits between 4-byte address and 1-byte checksum
+	dataBytes := resp[cmdIdx+5 : checksumIdx]
+
+	// Check if data is 4-bit nibble packed
+	var decoded []byte
+	if len(dataBytes)%2 == 0 {
+		// Combine pairs of nibbles: (high_nibble << 4) | low_nibble
+		for i := 0; i < len(dataBytes); i += 2 {
+			charByte := (dataBytes[i] << 4) | (dataBytes[i+1] & 0x0F)
+			decoded = append(decoded, charByte)
+		}
+	} else {
+		// Fallback for raw byte strings
+		decoded = dataBytes
+	}
+
+	return cleanASCII(decoded), nil
+}
+
+// getSetlistAddress calculates the 4-byte Roland address for Setlist N (1..32)
+func (c *linuxMidiClient) getSetlistAddress(setlistNum int) [4]byte {
+	idx := setlistNum - 1 // 0-based index (0..31)
+
+	b2 := byte(idx / 8)          // Bank 0..3: 0x00, 0x01, 0x02, 0x03
+	b3 := byte((idx % 8) * 0x10) // 0x00, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70
+
+	return [4]byte{
+		0x03, // Block 03
+		b2,
+		b3,
+		0x00, // Name offset (0x00)
+	}
+}
+
+// getSetlistStepsAddress calculates the address for step data of Setlist N (1..32)
+func (c *linuxMidiClient) getSetlistStepsAddress(setlistNum int) [4]byte {
+	addr := c.getSetlistAddress(setlistNum)
+	addr[3] = 0x10 // Step offset is 0x10 relative to the setlist base address
+	return addr
 }
