@@ -24,3 +24,10 @@ type Setlist struct {
 	Name  string        // 12-char Name
 	Steps []SetlistStep // Array of kit entries assigned to this setlist
 }
+
+type ClientOpt func(*ClientConfig)
+
+type ClientConfig struct {
+	PortPath string
+	Debug    bool
+}

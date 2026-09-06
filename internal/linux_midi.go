@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"go-spdsxpro/internal/log"
 	"go-spdsxpro/types"
-	"log"
 	"os"
 	"time"
 )
@@ -40,33 +40,7 @@ const (
 // Header: 0xF0, Non-Realtime ID: 0x7E, Target Device ID: 0x7F (All Call), General Info: 0x06, Identity Request: 0x01, EOX: 0xF7
 var sysExPing = []byte{0xF0, 0x7E, 0x7F, 0x06, 0x01, 0xF7}
 
-// ModelIDSPDSXPro SPD-SX PRO 5-byte Model ID verified from hardware output
-var ModelIDSPDSXPro = []byte{0x00, 0x00, 0x00, 0x00, 0x16}
-
-// computeRolandChecksum calculates the Roland 7-bit checksum:
-// 128 - ((sum of address + size/data bytes) % 128)
-func computeRolandChecksum(data []byte) byte {
-	var sum int
-	for _, b := range data {
-		sum += int(b)
-	}
-	return byte((128 - (sum % 128)) & 0x7F)
-}
-
-func encodeRQ1(deviceID byte, modelID []byte, addr [4]byte, size [4]byte) []byte {
-	msg := []byte{RolandHeaderByte, RolandVendorID, deviceID}
-	msg = append(msg, modelID...)
-	msg = append(msg, CmdRQ1)
-
-	payload := append(addr[:], size[:]...)
-	checksum := computeRolandChecksum(payload)
-
-	msg = append(msg, payload...)
-	msg = append(msg, checksum, RolandEOXByte)
-	return msg
-}
-
-func parseActiveKitResponse(resp []byte) (int, error) {
+func (c *linuxMidiClient) parseActiveKitResponse(resp []byte) (int, error) {
 	minLen := 3 + len(ModelIDSPDSXPro) + 1 + 4 + 4 + 1 + 1 // Header+Vendor+Dev + ModelID + Cmd + Addr + Data(4) + CS + EOX
 	if len(resp) < minLen {
 		return 0, fmt.Errorf("response payload too short (%d bytes)", len(resp))
@@ -83,7 +57,7 @@ func parseActiveKitResponse(resp []byte) (int, error) {
 
 	checksumIdx := len(resp) - 2
 	payloadForChecksum := resp[cmdIdx+1 : checksumIdx]
-	if computeRolandChecksum(payloadForChecksum) != resp[checksumIdx] {
+	if c.conn.computeRolandChecksum(payloadForChecksum) != resp[checksumIdx] {
 		return 0, errors.New("checksum mismatch")
 	}
 
@@ -102,7 +76,7 @@ func parseActiveKitResponse(resp []byte) (int, error) {
 type linuxMidiClient struct {
 	path     string
 	deviceID byte
-	dev      *os.File
+	conn     *Connection
 	timeout  time.Duration
 }
 
@@ -112,123 +86,27 @@ func (c *linuxMidiClient) Connect() error {
 		return err
 	}
 
-	c.dev = dev
+	c.conn = &Connection{dev: dev, timeout: c.timeout}
 
 	return nil
 }
 
 func (c *linuxMidiClient) Ping() error {
-	reply, err := c.TransceiveSysEx(sysExPing)
+	reply, err := c.conn.TransceiveSysEx(sysExPing)
 	if err != nil {
 		return err
 	}
 
-	return verifyResponse(reply)
+	return c.conn.verifyResponse(reply)
 
 }
 
 func (c *linuxMidiClient) Close() error {
-	if c.dev != nil {
-		return c.dev.Close()
+	if c.conn != nil {
+		return c.conn.Close()
 	}
 
 	return nil
-}
-
-func verifyResponse(resp []byte) error {
-	if len(resp) < 6 {
-		return fmt.Errorf("[-] Payload too short to be a valid SysEx response.")
-	}
-
-	// Check SysEx framing: Start (0xF0) and End (0xF7)
-	if resp[0] != 0xF0 || resp[len(resp)-1] != 0xF7 {
-		return fmt.Errorf("[-] Malformed SysEx message framing.")
-	}
-
-	// Format: F0 7E <deviceID> 06 02 <manufacturerID> ... F7
-	if resp[1] == 0x7E && resp[3] == 0x06 && resp[4] == 0x02 {
-		fmt.Println("[+] Received Universal Identity Reply.")
-
-		if resp[5] == rolandVendorID {
-			fmt.Println("[+] Roland Vendor ID matched (0x41).")
-			if len(resp) >= 14 {
-				// Roland Identity Reply payloads include Family ID (2 bytes) and Model Number (2 bytes)
-				family := resp[6:8]
-				model := resp[8:10]
-				revision := resp[10:14]
-				fmt.Printf("[+] Device Identity Verified:\n    - Family Code: %X\n    - Model Number: %X\n    - Software Revision: %X\n", family, model, revision)
-			}
-		} else {
-			fmt.Printf("[!] Responded by non-Roland device (Vendor ID: 0x%02X).\n", resp[5])
-		}
-	} else {
-		fmt.Println("[!] Received a non-identity SysEx message.")
-	}
-
-	return nil
-}
-
-func (c *linuxMidiClient) readSysEx() ([]byte, error) {
-	_ = c.dev.SetReadDeadline(time.Now().Add(c.timeout))
-	defer c.dev.SetReadDeadline(time.Time{})
-
-	var buf []byte
-	inSysEx := false
-	tmp := make([]byte, 256)
-
-	for {
-		n, err := c.dev.Read(tmp)
-		if err != nil {
-			return nil, fmt.Errorf("read timeout or error: %w", err)
-		}
-
-		for i := 0; i < n; i++ {
-			b := tmp[i]
-
-			if b >= 0xF8 && b != RolandEOXByte {
-				continue
-			}
-
-			if b == RolandHeaderByte {
-				if inSysEx {
-					return nil, fmt.Errorf("new header while in sysex")
-				}
-				inSysEx = true
-				buf = []byte{b}
-			} else {
-				if inSysEx {
-					buf = append(buf, b)
-					if b == RolandEOXByte {
-						log.Printf("received msg (%d bytes): %X", len(buf), buf)
-
-						return buf, nil
-					}
-				} else {
-					// skipped
-				}
-			}
-		}
-	}
-}
-
-func (c *linuxMidiClient) TransceiveSysEx(msg []byte) ([]byte, error) {
-	// Drain lingering incoming bytes with a quick 5ms deadline
-	_ = c.dev.SetReadDeadline(time.Now().Add(5 * time.Millisecond))
-	discard := make([]byte, 256)
-	for {
-		n, err := c.dev.Read(discard)
-		if n == 0 || err != nil {
-			break
-		}
-	}
-
-	log.Printf("sending msg: %X", msg)
-
-	if _, err := c.dev.Write(msg); err != nil {
-		return nil, fmt.Errorf("write error: %w", err)
-	}
-
-	return c.readSysEx()
 }
 
 func (c *linuxMidiClient) GetActiveKit() (int, error) {
@@ -237,14 +115,14 @@ func (c *linuxMidiClient) GetActiveKit() (int, error) {
 
 	// MUST request 4 bytes to match the 4-nibble DT1 payload returned by SPD-SX PRO
 	size := [4]byte{0x00, 0x00, 0x00, 0x04}
-	rq1Query := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+	rq1Query := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 
-	resp, err := c.TransceiveSysEx(rq1Query)
+	resp, err := c.conn.TransceiveSysEx(rq1Query)
 	if err != nil {
 		log.Fatalf("Failed to query active kit: %v", err)
 	}
 
-	kitNum, err := parseActiveKitResponse(resp)
+	kitNum, err := c.parseActiveKitResponse(resp)
 	if err != nil {
 		return -1, fmt.Errorf("Response validation failed: %v", err)
 	}
@@ -252,7 +130,7 @@ func (c *linuxMidiClient) GetActiveKit() (int, error) {
 	return kitNum, nil
 }
 
-func parseKitNameResponse(resp []byte) (string, string, error) {
+func (c *linuxMidiClient) parseKitNameResponse(resp []byte) (string, string, error) {
 	minLen := 3 + len(ModelIDSPDSXPro) + 1 + 4 + 1 + 1
 	if len(resp) < minLen {
 		return "", "", fmt.Errorf("payload short (%d bytes)", len(resp))
@@ -269,7 +147,7 @@ func parseKitNameResponse(resp []byte) (string, string, error) {
 
 	checksumIdx := len(resp) - 2
 	payloadForChecksum := resp[cmdIdx+1 : checksumIdx]
-	if computeRolandChecksum(payloadForChecksum) != resp[checksumIdx] {
+	if c.conn.computeRolandChecksum(payloadForChecksum) != resp[checksumIdx] {
 		return "", "", errors.New("checksum mismatch")
 	}
 
@@ -281,7 +159,7 @@ func parseKitNameResponse(resp []byte) (string, string, error) {
 	}
 
 	// Extract Kit Name (First 12 bytes)
-	name := cleanASCII(dataBytes[:KitNameLength])
+	name := c.cleanASCII(dataBytes[:KitNameLength])
 
 	// Extract Subtitle (Remaining bytes up to offset 44)
 	var subTitle string
@@ -290,13 +168,13 @@ func parseKitNameResponse(resp []byte) (string, string, error) {
 		if endIdx > KitBlockLength {
 			endIdx = KitBlockLength
 		}
-		subTitle = cleanASCII(dataBytes[KitNameLength:endIdx])
+		subTitle = c.cleanASCII(dataBytes[KitNameLength:endIdx])
 	}
 
 	return name, subTitle, nil
 }
 
-func cleanASCII(b []byte) string {
+func (c *linuxMidiClient) cleanASCII(b []byte) string {
 	var out []byte
 	for _, c := range b {
 		if c >= 32 && c <= 126 { // Printable ASCII range
@@ -328,18 +206,16 @@ func (c *linuxMidiClient) GetKitList() ([]types.Kit, error) {
 
 	for i := 1; i <= TotalKits; i++ {
 		addr := c.getKitNameAddress(i)
-		rq1Query := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+		rq1Query := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 
-		resp, err := c.TransceiveSysEx(rq1Query)
+		resp, err := c.conn.TransceiveSysEx(rq1Query)
 		if err != nil {
-			log.Printf("Stopped at kit %d: %v", i, err)
-			break
+			return nil, fmt.Errorf("Stopped at kit %d: %v", i, err)
 		}
 
-		name, subTitle, err := parseKitNameResponse(resp)
+		name, subTitle, err := c.parseKitNameResponse(resp)
 		if err != nil {
-			log.Printf("Failed to parse kit %d: %v", i, err)
-			continue
+			return nil, fmt.Errorf("Failed to parse kit %d: %v", i, err)
 		}
 
 		if name == "" {
@@ -365,8 +241,7 @@ func (c *linuxMidiClient) GetSetlistList() ([]types.Setlist, error) {
 	for i := 1; i <= TotalSetlists; i++ {
 		setlist, err := c.GetSetlist(i)
 		if err != nil {
-			log.Printf("Error fetching setlist %d: %v", i, err)
-			continue
+			return nil, fmt.Errorf("Error fetching setlist %d: %v", i, err)
 		}
 
 		setlists = append(setlists, *setlist)
@@ -384,14 +259,14 @@ func (c *linuxMidiClient) GetSetlist(setlistNum int) (*types.Setlist, error) {
 	// 1. Query Setlist Name (12 bytes at sub-offset 0x00)
 	nameAddr := c.getSetlistAddress(setlistNum)
 	nameSize := [4]byte{0x00, 0x00, 0x00, 0x18}
-	rq1Name := encodeRQ1(c.deviceID, ModelIDSPDSXPro, nameAddr, nameSize)
+	rq1Name := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, nameAddr, nameSize)
 
-	respName, err := c.TransceiveSysEx(rq1Name)
+	respName, err := c.conn.TransceiveSysEx(rq1Name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query setlist %d name: %w", setlistNum, err)
 	}
 
-	name, err := parseSetNameResponse(respName)
+	name, err := c.parseSetNameResponse(respName)
 	if err != nil {
 		return nil, fmt.Errorf("parsing setlist %d name failed: %w", setlistNum, err)
 	}
@@ -399,14 +274,14 @@ func (c *linuxMidiClient) GetSetlist(setlistNum int) (*types.Setlist, error) {
 	// 2. Query Setlist Kit Steps (32 steps * 4 bytes = 128 bytes at sub-offset B4 = 0x10)
 	stepsAddr := c.getSetlistStepsAddress(setlistNum)
 	stepsSize := [4]byte{0x00, 0x00, 0x01, 0x00}
-	rq1Steps := encodeRQ1(c.deviceID, ModelIDSPDSXPro, stepsAddr, stepsSize)
+	rq1Steps := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, stepsAddr, stepsSize)
 
-	respSteps, err := c.TransceiveSysEx(rq1Steps)
+	respSteps, err := c.conn.TransceiveSysEx(rq1Steps)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query setlist %d steps: %w", setlistNum, err)
 	}
 
-	steps, err := parseSetlistSteps(respSteps)
+	steps, err := c.parseSetlistSteps(respSteps)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse setlist %d steps: %w", setlistNum, err)
 	}
@@ -419,7 +294,7 @@ func (c *linuxMidiClient) GetSetlist(setlistNum int) (*types.Setlist, error) {
 }
 
 // parseSetlistSteps decodes 4-nibble encoded 16-bit kit numbers from the step payload
-func parseSetlistSteps(resp []byte) ([]types.SetlistStep, error) {
+func (c *linuxMidiClient) parseSetlistSteps(resp []byte) ([]types.SetlistStep, error) {
 	minLen := 3 + len(ModelIDSPDSXPro) + 1 + 4 + 1 + 1
 	if len(resp) < minLen {
 		return nil, fmt.Errorf("payload short (%d bytes)", len(resp))
@@ -460,7 +335,7 @@ func parseSetlistSteps(resp []byte) ([]types.SetlistStep, error) {
 }
 
 // parseSetNameResponse extracts the nibble-encoded Setlist name from a DT1 SysEx response
-func parseSetNameResponse(resp []byte) (string, error) {
+func (c *linuxMidiClient) parseSetNameResponse(resp []byte) (string, error) {
 	minLen := 3 + len(ModelIDSPDSXPro) + 1 + 4 + 1 + 1
 	if len(resp) < minLen {
 		return "", fmt.Errorf("payload short (%d bytes)", len(resp))
@@ -477,7 +352,7 @@ func parseSetNameResponse(resp []byte) (string, error) {
 
 	checksumIdx := len(resp) - 2
 	payloadForChecksum := resp[cmdIdx+1 : checksumIdx]
-	if computeRolandChecksum(payloadForChecksum) != resp[checksumIdx] {
+	if c.conn.computeRolandChecksum(payloadForChecksum) != resp[checksumIdx] {
 		return "", errors.New("checksum mismatch")
 	}
 
@@ -497,7 +372,7 @@ func parseSetNameResponse(resp []byte) (string, error) {
 		decoded = dataBytes
 	}
 
-	return cleanASCII(decoded), nil
+	return c.cleanASCII(decoded), nil
 }
 
 // getSetlistAddress calculates the 4-byte Roland address for Setlist N (1..32)

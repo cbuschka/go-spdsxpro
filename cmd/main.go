@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"go-spdsxpro/types/clientopts"
 	"log"
 	"time"
 
@@ -19,7 +20,7 @@ func main() {
 	log.Printf("Attempting to connect to SPD-SX PRO...")
 
 	// This MUST fail if no device is connected
-	client, err := spdsxpro.NewClient("/dev/snd/midiC1D0")
+	client, err := spdsxpro.NewClient("/dev/snd/midiC1D0", clientopts.WithDebug(false))
 	if err != nil {
 		log.Fatalf("FAILED TO CONNECT: %v", err)
 	}
@@ -27,17 +28,15 @@ func main() {
 
 	log.Printf("connected")
 
-	/*
-		err = dumpActiveKit(client)
-		if err != nil {
-			log.Fatalf("Error fetching active kit: %v", err)
-		}*/
+	err = dumpActiveKit(client)
+	if err != nil {
+		log.Fatalf("Error fetching active kit: %v", err)
+	}
 
-	/*
-		err = dumpKitList(client)
-		if err != nil {
-			log.Fatalf("Error fetching kit list: %v", err)
-		}*/
+	err = dumpKitList(client)
+	if err != nil {
+		log.Fatalf("Error fetching kit list: %v", err)
+	}
 
 	err = dumpSetList(client)
 	if err != nil {
