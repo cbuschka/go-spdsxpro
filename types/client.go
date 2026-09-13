@@ -17,6 +17,8 @@ type Client interface {
 	SetPadLayerVolume(kitIdx int, padIdx int, layer PadLayer, value int) error
 	SetKitName(kitIdx int, name string) error
 	SetKitSubTitle(kitIdx int, name string) error
+	SetKitClickTempo(kidIdx int, tempoBpm float64) error
+	GetKitClickTempo(kidIdx int) (float64, error)
 }
 
 type Kit struct {

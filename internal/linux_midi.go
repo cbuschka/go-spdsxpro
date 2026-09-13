@@ -36,8 +36,17 @@ const (
 	SetlistNameLength = 12 // Setlist Name is 12 ASCII bytes
 	SetlistMaxSteps   = 32 // Up to 32 kit steps per setlist
 
-	ParamOffsetKitName     = 0x00000000
-	ParamOffsetKitSubTitle = 0x00000010
+	ParamOffsetKitName     = uint32(0x00000000)
+	ParamOffsetKitSubTitle = uint32(0x00000010)
+
+	KitBaseAddres = uint32(0x04000000)
+	KitSize       = uint32(0x00020000)
+	KitCommon     = uint32(0x00000000)
+	KitClick      = uint32(0x00000300)
+
+	OffsetTempo     = uint32(0x00000056) // 4-nibble 20.0-260.0 (200-2600)
+	OffsetClickMode = uint32(0x00000000)
+	OffsetClickVol  = uint32(0x00000006)
 )
 
 // Universal Non-Realtime SysEx Identity Request (Ping)
@@ -189,7 +198,7 @@ func (c *linuxMidiClient) cleanASCII(b []byte) string {
 }
 
 // getKitNameAddress computes the 4-byte Roland address for Kit N (1-indexed: 1..200)
-func (c *linuxMidiClient) getKitParamAddress(kitNum int, paramOffset int) [4]byte {
+func (c *linuxMidiClient) getKitParamAddress(kitNum int, subsectionOffset uint32, paramOffset uint32) [4]byte {
 
 	/*
 		idx := kitNum - 1 // 0-based index
@@ -205,10 +214,7 @@ func (c *linuxMidiClient) getKitParamAddress(kitNum int, paramOffset int) [4]byt
 		return [4]byte{b1, b2, b3, b4}
 	*/
 
-	baseAddr := 0x04000000 + uint32(kitNum-1)*0x00020000
-	nameOffset := uint32(paramOffset) // Kit Name parameter offset within Kit structure
-
-	addr := baseAddr + nameOffset
+	addr := KitBaseAddres + uint32(kitNum-1)*KitSize + subsectionOffset + paramOffset
 
 	b := make([]byte, 4)
 	binary.BigEndian.PutUint32(b, addr)
@@ -221,7 +227,7 @@ func (c *linuxMidiClient) GetKitList() ([]types.Kit, error) {
 	size := [4]byte{0x00, 0x00, 0x00, byte(KitBlockLength)}
 
 	for i := 1; i <= TotalKits; i++ {
-		addr := c.getKitParamAddress(i, ParamOffsetKitName)
+		addr := c.getKitParamAddress(i, KitCommon, ParamOffsetKitName)
 		rq1Query := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 
 		resp, err := c.conn.TransceiveSysEx(rq1Query)
@@ -522,7 +528,7 @@ func (c *linuxMidiClient) SetKitName(kitNum int, name string) error {
 		return fmt.Errorf("kit number %d out of bounds (1..%d)", kitNum, TotalKits)
 	}
 
-	addr := c.getKitParamAddress(kitNum, ParamOffsetKitName)
+	addr := c.getKitParamAddress(kitNum, KitCommon, ParamOffsetKitName)
 
 	// Truncate or pad string to 16 ASCII characters (Roland standard kit name length)
 	padded := make([]byte, 16)
@@ -539,7 +545,7 @@ func (c *linuxMidiClient) SetKitName(kitNum int, name string) error {
 }
 
 func (c *linuxMidiClient) SetKitSubTitle(kitNum int, subTitle string) error {
-	addr := c.getKitParamAddress(kitNum, ParamOffsetKitSubTitle)
+	addr := c.getKitParamAddress(kitNum, KitCommon, ParamOffsetKitSubTitle)
 
 	// Truncate or pad string to 16 ASCII characters
 	padded := make([]byte, 16)
@@ -553,4 +559,75 @@ func (c *linuxMidiClient) SetKitSubTitle(kitNum int, subTitle string) error {
 
 	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, padded)
 	return c.conn.sendSysEx(sysex)
+}
+
+func (c *linuxMidiClient) encodeNibbledUint16(val uint16) []byte {
+	return []byte{
+		byte((val >> 12) & 0x0F),
+		byte((val >> 8) & 0x0F),
+		byte((val >> 4) & 0x0F),
+		byte(val & 0x0F),
+	}
+}
+
+func (c *linuxMidiClient) GetKitClickTempo(kitNum int) (float64, error) {
+
+	addr := c.getKitParamAddress(kitNum, KitCommon, OffsetTempo)
+	size := [4]byte{0x00, 0x00, 0x00, 0x04}
+
+	sysex := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+	reply, err := c.conn.TransceiveSysEx(sysex)
+	if err != nil {
+		return -1, err
+	}
+
+	data := reply[13:17]
+	rawVal := uint16(data[0]&0x0F)<<12 |
+		uint16(data[1]&0x0F)<<8 |
+		uint16(data[2]&0x0F)<<4 |
+		uint16(data[3]&0x0F)
+
+	return float64(rawVal) / 10.0, nil
+}
+
+func (c *linuxMidiClient) SetKitClickTempo(kitNum int, bpm float64) error {
+	// Scaled value: BPM * 10 (e.g., 120.0 BPM = 1200)
+	scaledValue := uint16(bpm * 10.0)
+
+	addr := c.getKitParamAddress(kitNum, KitCommon, OffsetTempo)
+	data := c.encodeNibbledUint16(scaledValue)
+
+	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
+	return c.conn.sendSysEx(sysex)
+}
+
+func decodeNibbledInt(b []byte) int {
+	if len(b) < 4 {
+		return 0
+	}
+	return int(b[0]&0x0F)<<12 |
+		int(b[1]&0x0F)<<8 |
+		int(b[2]&0x0F)<<4 |
+		int(b[3]&0x0F)
+}
+
+func decodeNibbledUint32(b []byte) uint32 {
+	if len(b) < 4 {
+		return 0
+	}
+	return uint32(b[0]&0x0F)<<12 |
+		uint32(b[1]&0x0F)<<8 |
+		uint32(b[2]&0x0F)<<4 |
+		uint32(b[3]&0x0F)
+}
+
+func decodeNibbledInt16Signed(b []byte) int16 {
+	if len(b) < 4 {
+		return 0
+	}
+	uVal := uint16(b[0]&0x0F)<<12 |
+		uint16(b[1]&0x0F)<<8 |
+		uint16(b[2]&0x0F)<<4 |
+		uint16(b[3]&0x0F)
+	return int16(uVal)
 }

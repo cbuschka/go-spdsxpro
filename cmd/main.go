@@ -67,13 +67,45 @@ func main() {
 
 	err = client.SetKitName(49, "KIT49")
 	if err != nil {
-		log.Fatalf("Error fetching pad vol: %v", err)
+		log.Fatalf("Error setting kit name: %v", err)
 	}
 
 	err = client.SetKitSubTitle(49, "This is KIT49")
 	if err != nil {
-		log.Fatalf("Error fetching pad vol: %v", err)
+		log.Fatalf("Error setting kit subtitle: %v", err)
 	}
+
+	clickTempo, err := client.GetKitClickTempo(49)
+	if err != nil {
+
+		log.Fatalf("Error getting click tempo: %v", err)
+	}
+	log.Printf("click tempo %v", clickTempo)
+
+	if clickTempo == 120 {
+		clickTempo = 160
+	} else {
+		clickTempo = 120
+	}
+	err = client.SetKitClickTempo(49, clickTempo)
+	if err != nil {
+
+		log.Fatalf("Error setting click tempo: %v", err)
+	}
+
+	clickTempo, err = client.GetKitClickTempo(49)
+	if err != nil {
+
+		log.Fatalf("Error getting click tempo: %v", err)
+	}
+	log.Printf("click tempo %v", clickTempo)
+
+	/*
+		err = client.SetKitClickTempo(49, 100)
+		if err != nil {
+
+			log.Fatalf("Error setting click tempo: %v", err)
+		}*/
 
 	/*
 		vol, err = client.GetPadLayerVolume(49, 0, types.LayerB)
