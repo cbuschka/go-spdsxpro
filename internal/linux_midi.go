@@ -419,8 +419,8 @@ func (c *linuxMidiClient) getSetlistStepsAddress(setlistNum int) [4]byte {
 	return addr
 }
 
-// getPadParamAddress constructs the 4-byte Roland address.
-func (c *linuxMidiClient) getPadParamAddress(kitIdx int, padIdx int, layer types.PadLayer, subAddrB4 byte) [4]byte {
+// getPadLayerParamAddress constructs the 4-byte Roland address.
+func (c *linuxMidiClient) getPadLayerParamAddress(kitIdx int, padIdx int, layer types.PadLayer, subAddrB4 byte) [4]byte {
 	// Kit Base Offset (Bytes 1 & 2)
 	kitStride := kitIdx * 2
 	b1 := byte(0x04 + (kitStride / 128))
@@ -437,7 +437,7 @@ func (c *linuxMidiClient) getPadParamAddress(kitIdx int, padIdx int, layer types
 // GetPadLayerVolume fetches volume for a specific layer on a pad.
 func (c *linuxMidiClient) GetPadLayerVolume(kitIdx int, padIdx int, layer types.PadLayer) (int, error) {
 	// Sub-address 0x05 holds volume within the layer block
-	addr := c.getPadParamAddress(kitIdx, padIdx, layer, 0x05)
+	addr := c.getPadLayerParamAddress(kitIdx, padIdx, layer, 0x05)
 
 	size := [4]byte{0x00, 0x00, 0x00, 0x04}
 	rq1Query := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
@@ -482,7 +482,7 @@ func (c *linuxMidiClient) extractVolumeFromDT1(resp []byte) (int, error) {
 }
 
 func (c *linuxMidiClient) SetPadLayerVolume(kitIdx int, padIdx int, layer types.PadLayer, rawVal int) error {
-	addr := c.getPadParamAddress(kitIdx, padIdx, layer, 0x05)
+	addr := c.getPadLayerParamAddress(kitIdx, padIdx, layer, 0x05)
 
 	// Ensure 16-bit range
 	if rawVal < 0 {

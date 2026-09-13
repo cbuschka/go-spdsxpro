@@ -20,6 +20,20 @@
 		"click": {
 			"tempo": 170
 		}
+	},
+	{
+		"slot": 53,
+		"name": "Hallo Spacko",
+		"click": {
+			"tempo": 140
+		}
+	},
+	{
+		"slot": 54,
+		"name": "Droge",
+		"click": {
+			"tempo": 140
+		}
 	}
   ]
 }
