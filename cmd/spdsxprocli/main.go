@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"go-spdsxpro/internal"
 	"go-spdsxpro/types/clientopts"
 	"log"
 	"math"
+	"os"
 	"time"
 
 	"go-spdsxpro"
@@ -13,7 +15,13 @@ import (
 )
 
 func main() {
-	var err error
+	err := run(os.Args[1])
+	if err != nil {
+		log.Fatalf("Loading config failed: %v", err)
+	}
+}
+
+func run(configFile string) error {
 	// Create a context with a strict 2-second timeout
 	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -29,83 +37,113 @@ func main() {
 
 	log.Printf("connected")
 
-	err = dumpActiveKit(client)
+	file, err := os.Open(configFile)
 	if err != nil {
-		log.Fatalf("Error fetching active kit: %v", err)
+		return err
+	}
+	defer file.Close()
+
+	config, err := internal.ReadConfig(file)
+	if err != nil {
+		return err
+	}
+
+	for _, kit := range config.Kits {
+		kitIdx := *kit.Slot - 1
+		log.Printf("Loading Kit: %d %s", kitIdx, kit.Name)
+
+		err = client.SetKitName(kitIdx, kit.Name)
+		if err != nil {
+			return err
+		}
+
+		err = client.SetKitSubTitle(kitIdx, kit.Subtitle)
+		if err != nil {
+			return err
+		}
+
+		err = client.SetKitClickTempo(kitIdx, float64(kit.Click.Tempo))
+		if err != nil {
+			return err
+		}
 	}
 
 	/*
-		layer := types.LayerB
-
-		vol, err := client.GetPadLayerVolume(49, 0, layer)
+		err = dumpActiveKit(client)
 		if err != nil {
-			log.Fatalf("Error fetching pad vol: %v", err)
+			log.Fatalf("Error fetching active kit: %v", err)
 		}
-		log.Printf("vol %d (%s)", vol, ValueToDb(vol))
 
-		const VOL1 = 60
-		const VOL2 = 0
+			layer := types.LayerB
 
-		if vol != VOL1 {
-			vol = VOL1
+			vol, err := client.GetPadLayerVolume(49, 0, layer)
+			if err != nil {
+				log.Fatalf("Error fetching pad vol: %v", err)
+			}
+			log.Printf("vol %d (%s)", vol, ValueToDb(vol))
+
+			const VOL1 = 60
+			const VOL2 = 0
+
+			if vol != VOL1 {
+				vol = VOL1
+			} else {
+				vol = VOL2
+			}
+
+			err = client.SetPadLayerVolume(49, 0, layer, vol)
+			if err != nil {
+				log.Fatalf("Error setting pad vol: %v", err)
+			}
+
+			vol, err = client.GetPadLayerVolume(49, 0, layer)
+			if err != nil {
+				log.Fatalf("Error fetching pad vol: %v", err)
+			}
+			log.Printf("vol %d (%s)", vol, ValueToDb(vol))
+
+
+		err = client.SetKitName(49, "KIT49")
+		if err != nil {
+			log.Fatalf("Error setting kit name: %v", err)
+		}
+
+		err = client.SetKitSubTitle(49, "This is KIT49")
+		if err != nil {
+			log.Fatalf("Error setting kit subtitle: %v", err)
+		}
+
+		clickTempo, err := client.GetKitClickTempo(49)
+		if err != nil {
+
+			log.Fatalf("Error getting click tempo: %v", err)
+		}
+		log.Printf("click tempo %v", clickTempo)
+
+		if clickTempo == 120 {
+			clickTempo = 160
 		} else {
-			vol = VOL2
+			clickTempo = 120
 		}
-
-		err = client.SetPadLayerVolume(49, 0, layer, vol)
-		if err != nil {
-			log.Fatalf("Error setting pad vol: %v", err)
-		}
-
-		vol, err = client.GetPadLayerVolume(49, 0, layer)
-		if err != nil {
-			log.Fatalf("Error fetching pad vol: %v", err)
-		}
-		log.Printf("vol %d (%s)", vol, ValueToDb(vol))
-
-	*/
-
-	err = client.SetKitName(49, "KIT49")
-	if err != nil {
-		log.Fatalf("Error setting kit name: %v", err)
-	}
-
-	err = client.SetKitSubTitle(49, "This is KIT49")
-	if err != nil {
-		log.Fatalf("Error setting kit subtitle: %v", err)
-	}
-
-	clickTempo, err := client.GetKitClickTempo(49)
-	if err != nil {
-
-		log.Fatalf("Error getting click tempo: %v", err)
-	}
-	log.Printf("click tempo %v", clickTempo)
-
-	if clickTempo == 120 {
-		clickTempo = 160
-	} else {
-		clickTempo = 120
-	}
-	err = client.SetKitClickTempo(49, clickTempo)
-	if err != nil {
-
-		log.Fatalf("Error setting click tempo: %v", err)
-	}
-
-	clickTempo, err = client.GetKitClickTempo(49)
-	if err != nil {
-
-		log.Fatalf("Error getting click tempo: %v", err)
-	}
-	log.Printf("click tempo %v", clickTempo)
-
-	/*
-		err = client.SetKitClickTempo(49, 100)
+		err = client.SetKitClickTempo(49, clickTempo)
 		if err != nil {
 
 			log.Fatalf("Error setting click tempo: %v", err)
-		}*/
+		}
+
+		clickTempo, err = client.GetKitClickTempo(49)
+		if err != nil {
+
+			log.Fatalf("Error getting click tempo: %v", err)
+		}
+		log.Printf("click tempo %v", clickTempo)
+
+		/*
+			err = client.SetKitClickTempo(49, 100)
+			if err != nil {
+
+				log.Fatalf("Error setting click tempo: %v", err)
+			}*/
 
 	/*
 		vol, err = client.GetPadLayerVolume(49, 0, types.LayerB)
@@ -126,6 +164,7 @@ func main() {
 			log.Fatalf("Error fetching set list: %v", err)
 		}
 	*/
+	return nil
 }
 
 func dumpKitList(client types.Client) error {

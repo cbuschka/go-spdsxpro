@@ -1,0 +1,25 @@
+{
+  "kits": [
+	{
+		"slot": 50,
+		"title": "UNSE",
+		"click": {
+			"tempo": 160
+		}
+	},
+	{
+		"slot": 51,
+		"title": "Stille Helden",
+		"click": {
+			"tempo": 182
+		}
+	},
+	{
+		"slot": 52,
+		"title": "Hey Junge",
+		"click": {
+			"tempo": 170
+		}
+	}
+  ]
+}

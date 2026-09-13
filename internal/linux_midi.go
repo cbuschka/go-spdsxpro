@@ -198,7 +198,7 @@ func (c *linuxMidiClient) cleanASCII(b []byte) string {
 }
 
 // getKitNameAddress computes the 4-byte Roland address for Kit N (1-indexed: 1..200)
-func (c *linuxMidiClient) getKitParamAddress(kitNum int, subsectionOffset uint32, paramOffset uint32) [4]byte {
+func (c *linuxMidiClient) getKitParamAddress(kitIdx int, subsectionOffset uint32, paramOffset uint32) [4]byte {
 
 	/*
 		idx := kitNum - 1 // 0-based index
@@ -214,7 +214,7 @@ func (c *linuxMidiClient) getKitParamAddress(kitNum int, subsectionOffset uint32
 		return [4]byte{b1, b2, b3, b4}
 	*/
 
-	addr := KitBaseAddres + uint32(kitNum-1)*KitSize + subsectionOffset + paramOffset
+	addr := KitBaseAddres + uint32(kitIdx)*KitSize + subsectionOffset + paramOffset
 
 	b := make([]byte, 4)
 	binary.BigEndian.PutUint32(b, addr)
@@ -570,9 +570,9 @@ func (c *linuxMidiClient) encodeNibbledUint16(val uint16) []byte {
 	}
 }
 
-func (c *linuxMidiClient) GetKitClickTempo(kitNum int) (float64, error) {
+func (c *linuxMidiClient) GetKitClickTempo(kitIdx int) (float64, error) {
 
-	addr := c.getKitParamAddress(kitNum, KitCommon, OffsetTempo)
+	addr := c.getKitParamAddress(kitIdx, KitCommon, OffsetTempo)
 	size := [4]byte{0x00, 0x00, 0x00, 0x04}
 
 	sysex := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
@@ -590,11 +590,11 @@ func (c *linuxMidiClient) GetKitClickTempo(kitNum int) (float64, error) {
 	return float64(rawVal) / 10.0, nil
 }
 
-func (c *linuxMidiClient) SetKitClickTempo(kitNum int, bpm float64) error {
+func (c *linuxMidiClient) SetKitClickTempo(kitIdx int, bpm float64) error {
 	// Scaled value: BPM * 10 (e.g., 120.0 BPM = 1200)
 	scaledValue := uint16(bpm * 10.0)
 
-	addr := c.getKitParamAddress(kitNum, KitCommon, OffsetTempo)
+	addr := c.getKitParamAddress(kitIdx, KitCommon, OffsetTempo)
 	data := c.encodeNibbledUint16(scaledValue)
 
 	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
