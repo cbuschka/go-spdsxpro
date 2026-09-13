@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"go-spdsxpro/internal/log"
@@ -186,17 +187,29 @@ func (c *linuxMidiClient) cleanASCII(b []byte) string {
 
 // getKitNameAddress computes the 4-byte Roland address for Kit N (1-indexed: 1..200)
 func (c *linuxMidiClient) getKitNameAddress(kitNum int) [4]byte {
-	idx := kitNum - 1 // 0-based index
 
-	// Each kit increments Byte 2 by 0x02
-	stride := idx * 2
+	/*
+		idx := kitNum - 1 // 0-based index
 
-	b1 := byte(0x04 + (stride / 128)) // Carry over to B1 after 64 kits
-	b2 := byte(stride % 128)          // B2 steps by 0x02 per kit
-	b3 := byte(0x00)
-	b4 := byte(0x00) // Kit Name sub-offset
+		// Each kit increments Byte 2 by 0x02
+		stride := idx * 2
 
-	return [4]byte{b1, b2, b3, b4}
+		b1 := byte(0x04 + (stride / 128)) // Carry over to B1 after 64 kits
+		b2 := byte(stride % 128)          // B2 steps by 0x02 per kit
+		b3 := byte(0x00)
+		b4 := byte(0x00) // Kit Name sub-offset
+
+		return [4]byte{b1, b2, b3, b4}
+	*/
+
+	baseAddr := 0x04000000 + uint32(kitNum-1)*0x00020000
+	nameOffset := uint32(0x00000000) // Kit Name parameter offset within Kit structure
+
+	addr := baseAddr + nameOffset
+
+	b := make([]byte, 4)
+	binary.BigEndian.PutUint32(b, addr)
+	return [4]byte(b)
 }
 
 func (c *linuxMidiClient) GetKitList() ([]types.Kit, error) {
@@ -477,4 +490,59 @@ func (c *linuxMidiClient) SetPadLayerVolume(kitIdx int, padIdx int, layer types.
 
 	dt1Msg := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
 	return c.conn.sendSysEx(dt1Msg)
+}
+
+// encodeNibbleASCII converts an ASCII string into a Roland 4-bit nibble byte slice.
+// If paddedLen > 0, it right-pads the string with spaces to fill the exact byte count.
+func (c *linuxMidiClient) encodeNibbleASCII(str string, paddedLen int) []byte {
+	// Truncate if string exceeds expected length
+	if paddedLen > 0 && len(str) > paddedLen {
+		str = str[:paddedLen]
+	}
+
+	// Pad with spaces to match expected byte length
+	if paddedLen > 0 && len(str) < paddedLen {
+		str = fmt.Sprintf("%-*s", paddedLen, str)
+	}
+
+	encoded := make([]byte, 0, len(str)*2)
+	for _, ch := range []byte(str) {
+		// High nibble (bits 7-4), Low nibble (bits 3-0)
+		encoded = append(encoded, byte((ch>>4)&0x0F), byte(ch&0x0F))
+	}
+
+	return encoded
+}
+
+func kitNameAddress(kitNum int) []byte {
+
+	baseAddr := 0x04000000 + uint32(kitNum-1)*0x00020000
+	nameOffset := uint32(0x00000000) // Kit Name parameter offset within Kit structure
+
+	addr := baseAddr + nameOffset
+
+	b := make([]byte, 4)
+	binary.BigEndian.PutUint32(b, addr)
+	return b
+}
+
+func (c *linuxMidiClient) SetKitName(kitNum int, name string) error {
+	if kitNum < 1 || kitNum > TotalKits {
+		return fmt.Errorf("kit number %d out of bounds (1..%d)", kitNum, TotalKits)
+	}
+
+	addr := c.getKitNameAddress(kitNum)
+
+	// Truncate or pad string to 16 ASCII characters (Roland standard kit name length)
+	padded := make([]byte, 16)
+	for i := 0; i < len(padded); i++ {
+		if i < len(name) {
+			padded[i] = name[i]
+		} else {
+			padded[i] = 0x20 // Space padding
+		}
+	}
+
+	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, padded)
+	return c.conn.sendSysEx(sysex)
 }

@@ -29,33 +29,46 @@ func main() {
 
 	log.Printf("connected")
 
-	layer := types.LayerB
+	err = dumpActiveKit(client)
+	if err != nil {
+		log.Fatalf("Error fetching active kit: %v", err)
+	}
 
-	vol, err := client.GetPadLayerVolume(49, 0, layer)
+	/*
+		layer := types.LayerB
+
+		vol, err := client.GetPadLayerVolume(49, 0, layer)
+		if err != nil {
+			log.Fatalf("Error fetching pad vol: %v", err)
+		}
+		log.Printf("vol %d (%s)", vol, ValueToDb(vol))
+
+		const VOL1 = 60
+		const VOL2 = 0
+
+		if vol != VOL1 {
+			vol = VOL1
+		} else {
+			vol = VOL2
+		}
+
+		err = client.SetPadLayerVolume(49, 0, layer, vol)
+		if err != nil {
+			log.Fatalf("Error setting pad vol: %v", err)
+		}
+
+		vol, err = client.GetPadLayerVolume(49, 0, layer)
+		if err != nil {
+			log.Fatalf("Error fetching pad vol: %v", err)
+		}
+		log.Printf("vol %d (%s)", vol, ValueToDb(vol))
+
+	*/
+
+	err = client.SetKitName(49, "KIT49")
 	if err != nil {
 		log.Fatalf("Error fetching pad vol: %v", err)
 	}
-	log.Printf("vol %d (%s)", vol, ValueToDb(vol))
-
-	const VOL1 = 60
-	const VOL2 = 0
-
-	if vol != VOL1 {
-		vol = VOL1
-	} else {
-		vol = VOL2
-	}
-
-	err = client.SetPadLayerVolume(49, 0, layer, vol)
-	if err != nil {
-		log.Fatalf("Error setting pad vol: %v", err)
-	}
-
-	vol, err = client.GetPadLayerVolume(49, 0, layer)
-	if err != nil {
-		log.Fatalf("Error fetching pad vol: %v", err)
-	}
-	log.Printf("vol %d (%s)", vol, ValueToDb(vol))
 
 	/*
 		vol, err = client.GetPadLayerVolume(49, 0, types.LayerB)
@@ -65,10 +78,6 @@ func main() {
 		log.Printf("vol %d (%s)", vol, ValueToDb(vol))
 	*/
 	/*
-		err = dumpActiveKit(client)
-		if err != nil {
-			log.Fatalf("Error fetching active kit: %v", err)
-		}
 
 		err = dumpKitList(client)
 		if err != nil {
