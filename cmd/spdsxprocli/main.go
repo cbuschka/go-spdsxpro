@@ -56,16 +56,20 @@ func run(configFile string) error {
 		if err != nil {
 			return err
 		}
+		log.Printf("Kit name set: %d %s", kitIdx, kit.Name)
 
 		err = client.SetKitSubTitle(kitIdx, kit.Subtitle)
 		if err != nil {
 			return err
 		}
+		log.Printf("Kit subtitle set: %d %s", kitIdx, kit.Subtitle)
 
 		err = client.SetKitClickTempo(kitIdx, float64(kit.Click.Tempo))
 		if err != nil {
 			return err
 		}
+		log.Printf("Kit click set: %d %d", kitIdx, kit.Click.Tempo)
+
 	}
 
 	/*

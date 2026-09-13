@@ -2,21 +2,21 @@
   "kits": [
 	{
 		"slot": 50,
-		"title": "UNSE",
+		"name": "Unsere Zeit",
 		"click": {
 			"tempo": 160
 		}
 	},
 	{
 		"slot": 51,
-		"title": "Stille Helden",
+		"name": "Stille Helden",
 		"click": {
 			"tempo": 182
 		}
 	},
 	{
 		"slot": 52,
-		"title": "Hey Junge",
+		"name": "Hey Junge",
 		"click": {
 			"tempo": 170
 		}
