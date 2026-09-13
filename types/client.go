@@ -22,8 +22,9 @@ type Client interface {
 	SetKitPadLinkSend(kitIdx int, padIdx int, tx int) error
 	SetKitPadLinkReceive(kitIdx int, padIdx int, rx int) error
 	SetKitClickStartRange(kitIdx int, padRange int) error
+	SetKitClickMode(kitIdx int, mode int) error
+	GetKitClickMode(kitIdx int) (int, error)
 }
-
 type Kit struct {
 	Number   int
 	Name     string

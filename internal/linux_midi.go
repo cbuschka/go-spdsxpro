@@ -44,6 +44,8 @@ const (
 	KitCommon     = uint32(0x00000000)
 	KitClick      = uint32(0x00000300)
 
+	OffsetClickVolume      = uint32(0x00000009) // 4 nibbles: -601..60 (-INF, -60.0dB..+6.0dB)
+	OffsetClickPan         = uint32(0x0000000B) // 4 nibbles: -15..15 (L15..C..R15)
 	OffsetClickStartRange2 = uint32(0x0000000E) // Offset within KitClick section
 	OffsetTempo            = uint32(0x00000056) // 4-nibble 20.0-260.0 (200-2600)
 	OffsetClickMode        = uint32(0x00000000)
@@ -707,4 +709,109 @@ func (c *linuxMidiClient) SetKitClickStartRange(kitIdx int, padRange int) error 
 
 	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
 	return c.conn.sendSysEx(sysex)
+}
+
+// SetKitClickMode sets the Click Mode (0 = PRESET, 1 = WAVE, 2 = CLICK-TRACK) for a kit
+func (c *linuxMidiClient) SetKitClickMode(kitIdx int, mode int) error {
+	if mode > 2 {
+		return fmt.Errorf("click mode %d out of bounds (0..2: PRESET, WAVE, CLICK-TRACK)", mode)
+	}
+
+	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickMode)
+	data := []byte{byte(mode)}
+
+	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
+	return c.conn.sendSysEx(sysex)
+}
+
+// GetKitClickMode retrieves the Click Mode for a kit
+func (c *linuxMidiClient) GetKitClickMode(kitIdx int) (int, error) {
+	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickMode)
+	size := [4]byte{0x00, 0x00, 0x00, 0x01}
+
+	sysex := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+	reply, err := c.conn.TransceiveSysEx(sysex)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(reply) < 16 {
+		return 0, fmt.Errorf("unexpected reply length: %d bytes", len(reply))
+	}
+
+	return int(reply[13]), nil
+}
+
+// SetKitClickVolume sets the Click Volume in tenths of dB (-601 = -INF, -600..60 = -60.0dB..+6.0dB)
+func (c *linuxMidiClient) SetKitClickVolume(kidIdx int, volumeDb int) error {
+	if volumeDb < -601 || volumeDb > 60 {
+		return fmt.Errorf("volume %d out of bounds (-601..60)", volumeDb)
+	}
+
+	addr := c.getKitParamAddress(kidIdx, KitClick, OffsetClickVolume)
+	data := c.encodeNibbledUint16(uint16(int16(volumeDb)))
+
+	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
+	return c.conn.sendSysEx(sysex)
+}
+
+// GetKitClickVolume retrieves the Click Volume (-601 = -INF, -600..60 = -60.0dB..+6.0dB)
+func (c *linuxMidiClient) GetKitClickVolume(kidIdx int) (int16, error) {
+	addr := c.getKitParamAddress(kidIdx, KitClick, OffsetClickVolume)
+	size := [4]byte{0x00, 0x00, 0x00, 0x04}
+
+	sysex := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+	reply, err := c.conn.TransceiveSysEx(sysex)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(reply) < 17 {
+		return 0, fmt.Errorf("unexpected reply length: %d bytes", len(reply))
+	}
+
+	data := reply[13:17]
+	rawVal := uint16(data[0]&0x0F)<<12 |
+		uint16(data[1]&0x0F)<<8 |
+		uint16(data[2]&0x0F)<<4 |
+		uint16(data[3]&0x0F)
+
+	return int16(rawVal), nil
+}
+
+// SetKitClickPan sets the Click Pan position (-15 = L15, 0 = Center, 15 = R15)
+func (c *linuxMidiClient) SetKitClickPan(kitIdx int, pan int8) error {
+	if pan < -15 || pan > 15 {
+		return fmt.Errorf("pan %d out of bounds (-15..15)", pan)
+	}
+
+	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickPan)
+	data := c.encodeNibbledUint16(uint16(int16(pan)))
+
+	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
+	return c.conn.sendSysEx(sysex)
+}
+
+// GetKitClickPan retrieves the Click Pan position (-15..15)
+func (c *linuxMidiClient) GetKitClickPan(kitIdx int) (int8, error) {
+	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickPan)
+	size := [4]byte{0x00, 0x00, 0x00, 0x04}
+
+	sysex := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+	reply, err := c.conn.TransceiveSysEx(sysex)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(reply) < 17 {
+		return 0, fmt.Errorf("unexpected reply length: %d bytes", len(reply))
+	}
+
+	data := reply[13:17]
+	rawVal := uint16(data[0]&0x0F)<<12 |
+		uint16(data[1]&0x0F)<<8 |
+		uint16(data[2]&0x0F)<<4 |
+		uint16(data[3]&0x0F)
+
+	return int8(int16(rawVal)), nil
 }
