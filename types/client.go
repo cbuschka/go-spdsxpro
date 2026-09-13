@@ -16,6 +16,7 @@ type Client interface {
 	GetPadLayerVolume(kitIdx int, padIdx int, layer PadLayer) (int, error)
 	SetPadLayerVolume(kitIdx int, padIdx int, layer PadLayer, value int) error
 	SetKitName(kitIdx int, name string) error
+	SetKitSubTitle(kitIdx int, name string) error
 }
 
 type Kit struct {

@@ -35,6 +35,9 @@ const (
 	TotalSetlists     = 32 // SPD-SX PRO supports up to 32 Setlists
 	SetlistNameLength = 12 // Setlist Name is 12 ASCII bytes
 	SetlistMaxSteps   = 32 // Up to 32 kit steps per setlist
+
+	ParamOffsetKitName     = 0x00000000
+	ParamOffsetKitSubTitle = 0x00000010
 )
 
 // Universal Non-Realtime SysEx Identity Request (Ping)
@@ -186,7 +189,7 @@ func (c *linuxMidiClient) cleanASCII(b []byte) string {
 }
 
 // getKitNameAddress computes the 4-byte Roland address for Kit N (1-indexed: 1..200)
-func (c *linuxMidiClient) getKitNameAddress(kitNum int) [4]byte {
+func (c *linuxMidiClient) getKitParamAddress(kitNum int, paramOffset int) [4]byte {
 
 	/*
 		idx := kitNum - 1 // 0-based index
@@ -203,7 +206,7 @@ func (c *linuxMidiClient) getKitNameAddress(kitNum int) [4]byte {
 	*/
 
 	baseAddr := 0x04000000 + uint32(kitNum-1)*0x00020000
-	nameOffset := uint32(0x00000000) // Kit Name parameter offset within Kit structure
+	nameOffset := uint32(paramOffset) // Kit Name parameter offset within Kit structure
 
 	addr := baseAddr + nameOffset
 
@@ -218,7 +221,7 @@ func (c *linuxMidiClient) GetKitList() ([]types.Kit, error) {
 	size := [4]byte{0x00, 0x00, 0x00, byte(KitBlockLength)}
 
 	for i := 1; i <= TotalKits; i++ {
-		addr := c.getKitNameAddress(i)
+		addr := c.getKitParamAddress(i, ParamOffsetKitName)
 		rq1Query := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 
 		resp, err := c.conn.TransceiveSysEx(rq1Query)
@@ -514,30 +517,35 @@ func (c *linuxMidiClient) encodeNibbleASCII(str string, paddedLen int) []byte {
 	return encoded
 }
 
-func kitNameAddress(kitNum int) []byte {
-
-	baseAddr := 0x04000000 + uint32(kitNum-1)*0x00020000
-	nameOffset := uint32(0x00000000) // Kit Name parameter offset within Kit structure
-
-	addr := baseAddr + nameOffset
-
-	b := make([]byte, 4)
-	binary.BigEndian.PutUint32(b, addr)
-	return b
-}
-
 func (c *linuxMidiClient) SetKitName(kitNum int, name string) error {
 	if kitNum < 1 || kitNum > TotalKits {
 		return fmt.Errorf("kit number %d out of bounds (1..%d)", kitNum, TotalKits)
 	}
 
-	addr := c.getKitNameAddress(kitNum)
+	addr := c.getKitParamAddress(kitNum, ParamOffsetKitName)
 
 	// Truncate or pad string to 16 ASCII characters (Roland standard kit name length)
 	padded := make([]byte, 16)
 	for i := 0; i < len(padded); i++ {
 		if i < len(name) {
 			padded[i] = name[i]
+		} else {
+			padded[i] = 0x20 // Space padding
+		}
+	}
+
+	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, padded)
+	return c.conn.sendSysEx(sysex)
+}
+
+func (c *linuxMidiClient) SetKitSubTitle(kitNum int, subTitle string) error {
+	addr := c.getKitParamAddress(kitNum, ParamOffsetKitSubTitle)
+
+	// Truncate or pad string to 16 ASCII characters
+	padded := make([]byte, 16)
+	for i := 0; i < len(padded); i++ {
+		if i < len(subTitle) {
+			padded[i] = subTitle[i]
 		} else {
 			padded[i] = 0x20 // Space padding
 		}

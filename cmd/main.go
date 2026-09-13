@@ -70,6 +70,11 @@ func main() {
 		log.Fatalf("Error fetching pad vol: %v", err)
 	}
 
+	err = client.SetKitSubTitle(49, "This is KIT49")
+	if err != nil {
+		log.Fatalf("Error fetching pad vol: %v", err)
+	}
+
 	/*
 		vol, err = client.GetPadLayerVolume(49, 0, types.LayerB)
 		if err != nil {
