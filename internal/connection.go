@@ -16,29 +16,6 @@ type Connection struct {
 	timeout time.Duration
 }
 
-// computeRolandChecksum calculates the Roland 7-bit checksum:
-// 128 - ((sum of address + size/data bytes) % 128)
-func (c *Connection) computeRolandChecksum(data []byte) byte {
-	var sum int
-	for _, b := range data {
-		sum += int(b)
-	}
-	return byte((128 - (sum % 128)) & 0x7F)
-}
-
-func (c *Connection) encodeRQ1(deviceID byte, modelID []byte, addr [4]byte, size [4]byte) []byte {
-	msg := []byte{RolandHeaderByte, RolandVendorID, deviceID}
-	msg = append(msg, modelID...)
-	msg = append(msg, CmdRQ1)
-
-	payload := append(addr[:], size[:]...)
-	checksum := c.computeRolandChecksum(payload)
-
-	msg = append(msg, payload...)
-	msg = append(msg, checksum, RolandEOXByte)
-	return msg
-}
-
 func (c *Connection) readSysEx() ([]byte, error) {
 	_ = c.dev.SetReadDeadline(time.Now().Add(c.timeout))
 	defer c.dev.SetReadDeadline(time.Time{})
@@ -186,7 +163,7 @@ func (c *Connection) encodeDT1(deviceID byte, modelID []byte, addr [4]byte, data
 	msg = append(msg, CmdDT1)
 
 	payload := append(addr[:], data[:]...)
-	checksum := c.computeRolandChecksum(payload)
+	checksum := computeRolandChecksum(payload)
 
 	msg = append(msg, payload...)
 	msg = append(msg, checksum, RolandEOXByte)

@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -12,15 +11,9 @@ import (
 )
 
 const (
-	RolandHeaderByte = 0xF0
-	RolandEOXByte    = 0xF7
-	RolandVendorID   = 0x41
-	DeviceIDAll      = 0x10 // Default Roland Device ID (Base 17 / 0x10)
+	DeviceIDAll = 0x10 // Default Roland Device ID (Base 17 / 0x10)
 	// Device IDs
 	DefaultDeviceID byte = 0x10
-
-	CmdRQ1 = 0x11 // Request Data 1
-	CmdDT1 = 0x12 // Data Set 1 (Response/Write)
 
 	TotalKits = 200 // SPD-SX PRO supports 200 kits
 
@@ -55,10 +48,6 @@ const (
 	OffsetPadLinkRx        = uint32(0x0000000D)
 )
 
-// Universal Non-Realtime SysEx Identity Request (Ping)
-// Header: 0xF0, Non-Realtime ID: 0x7E, Target Device ID: 0x7F (All Call), General Info: 0x06, Identity Request: 0x01, EOX: 0xF7
-var sysExPing = []byte{0xF0, 0x7E, 0x7F, 0x06, 0x01, 0xF7}
-
 func (c *linuxMidiClient) parseActiveKitResponse(resp []byte) (int, error) {
 	minLen := 3 + len(ModelIDSPDSXPro) + 1 + 4 + 4 + 1 + 1 // Header+Vendor+Dev + ModelID + Cmd + Addr + Data(4) + CS + EOX
 	if len(resp) < minLen {
@@ -76,7 +65,7 @@ func (c *linuxMidiClient) parseActiveKitResponse(resp []byte) (int, error) {
 
 	checksumIdx := len(resp) - 2
 	payloadForChecksum := resp[cmdIdx+1 : checksumIdx]
-	if c.conn.computeRolandChecksum(payloadForChecksum) != resp[checksumIdx] {
+	if computeRolandChecksum(payloadForChecksum) != resp[checksumIdx] {
 		return 0, errors.New("checksum mismatch")
 	}
 
@@ -134,7 +123,7 @@ func (c *linuxMidiClient) GetActiveKit() (int, error) {
 
 	// MUST request 4 bytes to match the 4-nibble DT1 payload returned by SPD-SX PRO
 	size := [4]byte{0x00, 0x00, 0x00, 0x04}
-	rq1Query := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+	rq1Query := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 
 	resp, err := c.conn.TransceiveSysEx(rq1Query)
 	if err != nil {
@@ -166,7 +155,7 @@ func (c *linuxMidiClient) parseKitNameResponse(resp []byte) (string, string, err
 
 	checksumIdx := len(resp) - 2
 	payloadForChecksum := resp[cmdIdx+1 : checksumIdx]
-	if c.conn.computeRolandChecksum(payloadForChecksum) != resp[checksumIdx] {
+	if computeRolandChecksum(payloadForChecksum) != resp[checksumIdx] {
 		return "", "", errors.New("checksum mismatch")
 	}
 
@@ -178,7 +167,7 @@ func (c *linuxMidiClient) parseKitNameResponse(resp []byte) (string, string, err
 	}
 
 	// Extract Kit Name (First 12 bytes)
-	name := c.cleanASCII(dataBytes[:KitNameLength])
+	name := cleanASCII(dataBytes[:KitNameLength])
 
 	// Extract Subtitle (Remaining bytes up to offset 44)
 	var subTitle string
@@ -187,20 +176,10 @@ func (c *linuxMidiClient) parseKitNameResponse(resp []byte) (string, string, err
 		if endIdx > KitBlockLength {
 			endIdx = KitBlockLength
 		}
-		subTitle = c.cleanASCII(dataBytes[KitNameLength:endIdx])
+		subTitle = cleanASCII(dataBytes[KitNameLength:endIdx])
 	}
 
 	return name, subTitle, nil
-}
-
-func (c *linuxMidiClient) cleanASCII(b []byte) string {
-	var out []byte
-	for _, c := range b {
-		if c >= 32 && c <= 126 { // Printable ASCII range
-			out = append(out, c)
-		}
-	}
-	return string(bytes.TrimSpace(out))
 }
 
 // getKitNameAddress computes the 4-byte Roland address for Kit N (1-indexed: 1..200)
@@ -234,7 +213,7 @@ func (c *linuxMidiClient) GetKitList() ([]types.Kit, error) {
 
 	for i := 1; i <= TotalKits; i++ {
 		addr := c.getKitParamAddress(i, KitCommon, ParamOffsetKitName)
-		rq1Query := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+		rq1Query := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 
 		resp, err := c.conn.TransceiveSysEx(rq1Query)
 		if err != nil {
@@ -287,7 +266,7 @@ func (c *linuxMidiClient) GetSetlist(setlistNum int) (*types.Setlist, error) {
 	// 1. Query Setlist Name (12 bytes at sub-offset 0x00)
 	nameAddr := c.getSetlistAddress(setlistNum)
 	nameSize := [4]byte{0x00, 0x00, 0x00, 0x18}
-	rq1Name := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, nameAddr, nameSize)
+	rq1Name := encodeRQ1(c.deviceID, ModelIDSPDSXPro, nameAddr, nameSize)
 
 	respName, err := c.conn.TransceiveSysEx(rq1Name)
 	if err != nil {
@@ -302,7 +281,7 @@ func (c *linuxMidiClient) GetSetlist(setlistNum int) (*types.Setlist, error) {
 	// 2. Query Setlist Kit Steps (32 steps * 4 bytes = 128 bytes at sub-offset B4 = 0x10)
 	stepsAddr := c.getSetlistStepsAddress(setlistNum)
 	stepsSize := [4]byte{0x00, 0x00, 0x01, 0x00}
-	rq1Steps := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, stepsAddr, stepsSize)
+	rq1Steps := encodeRQ1(c.deviceID, ModelIDSPDSXPro, stepsAddr, stepsSize)
 
 	respSteps, err := c.conn.TransceiveSysEx(rq1Steps)
 	if err != nil {
@@ -380,7 +359,7 @@ func (c *linuxMidiClient) parseSetNameResponse(resp []byte) (string, error) {
 
 	checksumIdx := len(resp) - 2
 	payloadForChecksum := resp[cmdIdx+1 : checksumIdx]
-	if c.conn.computeRolandChecksum(payloadForChecksum) != resp[checksumIdx] {
+	if computeRolandChecksum(payloadForChecksum) != resp[checksumIdx] {
 		return "", errors.New("checksum mismatch")
 	}
 
@@ -400,7 +379,7 @@ func (c *linuxMidiClient) parseSetNameResponse(resp []byte) (string, error) {
 		decoded = dataBytes
 	}
 
-	return c.cleanASCII(decoded), nil
+	return cleanASCII(decoded), nil
 }
 
 // getSetlistAddress calculates the 4-byte Roland address for Setlist N (1..32)
@@ -446,7 +425,7 @@ func (c *linuxMidiClient) GetPadLayerVolume(kitIdx int, padIdx int, layer types.
 	addr := c.getPadLayerParamAddress(kitIdx, padIdx, layer, 0x05)
 
 	size := [4]byte{0x00, 0x00, 0x00, 0x04}
-	rq1Query := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+	rq1Query := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 
 	resp, err := c.conn.TransceiveSysEx(rq1Query)
 	if err != nil {
@@ -581,7 +560,7 @@ func (c *linuxMidiClient) GetKitClickTempo(kitIdx int) (float64, error) {
 	addr := c.getKitParamAddress(kitIdx, KitCommon, OffsetTempo)
 	size := [4]byte{0x00, 0x00, 0x00, 0x04}
 
-	sysex := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+	sysex := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 	reply, err := c.conn.TransceiveSysEx(sysex)
 	if err != nil {
 		return -1, err
@@ -644,7 +623,7 @@ func (c *linuxMidiClient) GetKitPadLinkSend(kitIdx int, padIdx int) (int, error)
 	addr := c.getKitParamAddress(kitIdx, padOffset, 0x0000000C)
 	size := [4]byte{0x00, 0x00, 0x00, 0x02}
 
-	sysex := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+	sysex := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 	reply, err := c.conn.TransceiveSysEx(sysex)
 	if err != nil {
 		return -1, err
@@ -663,7 +642,7 @@ func (c *linuxMidiClient) GetKitPadLinkReceive(kitIdx int, padIdx int) (int, err
 	addr := c.getKitParamAddress(kitIdx, padOffset, 0x0000000C)
 	size := [4]byte{0x00, 0x00, 0x00, 0x02}
 
-	sysex := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+	sysex := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 	reply, err := c.conn.TransceiveSysEx(sysex)
 	if err != nil {
 		return -1, err
@@ -745,7 +724,7 @@ func (c *linuxMidiClient) GetKitClickMode(kitIdx int) (int, error) {
 	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickMode)
 	size := [4]byte{0x00, 0x00, 0x00, 0x01}
 
-	sysex := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+	sysex := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 	reply, err := c.conn.TransceiveSysEx(sysex)
 	if err != nil {
 		return 0, err
@@ -776,7 +755,7 @@ func (c *linuxMidiClient) GetKitClickVolume(kidIdx int) (int16, error) {
 	addr := c.getKitParamAddress(kidIdx, KitClick, OffsetClickVolume)
 	size := [4]byte{0x00, 0x00, 0x00, 0x04}
 
-	sysex := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+	sysex := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 	reply, err := c.conn.TransceiveSysEx(sysex)
 	if err != nil {
 		return 0, err
@@ -813,7 +792,7 @@ func (c *linuxMidiClient) GetKitClickPan(kitIdx int) (int8, error) {
 	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickPan)
 	size := [4]byte{0x00, 0x00, 0x00, 0x04}
 
-	sysex := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+	sysex := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 	reply, err := c.conn.TransceiveSysEx(sysex)
 	if err != nil {
 		return 0, err
