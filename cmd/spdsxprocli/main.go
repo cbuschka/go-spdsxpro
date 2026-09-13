@@ -70,11 +70,17 @@ func run(configFile string) error {
 		}
 		log.Printf("Kit click set: %d %d", kitIdx, kit.Click.Tempo)
 
-		err = client.SetKitClickStartRange(kitIdx, kit.Click.PadStartRange)
+		err = client.SetKitClickStartRangeFrom(kitIdx, kit.Click.StartPad.From)
 		if err != nil {
 			return err
 		}
-		log.Printf("Kit click pad start range set: %d %d", kitIdx, kit.Click.PadStartRange)
+		log.Printf("Kit %d click pad start range set: %d", kitIdx, kit.Click.StartPad.From)
+
+		err = client.SetKitClickStartRangeTo(kitIdx, kit.Click.StartPad.To)
+		if err != nil {
+			return err
+		}
+		log.Printf("Kit %d click pad start range set: %d", kitIdx, kit.Click.StartPad.To)
 
 		for _, padLink := range kit.PadLinks {
 			padIndex := padLink.PadIndex

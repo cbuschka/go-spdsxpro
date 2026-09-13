@@ -21,7 +21,8 @@ type Client interface {
 	GetKitClickTempo(kidIdx int) (float64, error)
 	SetKitPadLinkSend(kitIdx int, padIdx int, tx int) error
 	SetKitPadLinkReceive(kitIdx int, padIdx int, rx int) error
-	SetKitClickStartRange(kitIdx int, padRange int) error
+	SetKitClickStartRangeFrom(kitIdx int, from int) error
+	SetKitClickStartRangeTo(kitIdx int, to int) error
 	SetKitClickMode(kitIdx int, mode int) error
 	GetKitClickMode(kitIdx int) (int, error)
 }

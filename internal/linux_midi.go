@@ -46,7 +46,8 @@ const (
 
 	OffsetClickVolume      = uint32(0x00000009) // 4 nibbles: -601..60 (-INF, -60.0dB..+6.0dB)
 	OffsetClickPan         = uint32(0x0000000B) // 4 nibbles: -15..15 (L15..C..R15)
-	OffsetClickStartRange2 = uint32(0x0000000E) // Offset within KitClick section
+	OffsetClickStartRange1 = uint32(0x0000000E) // Offset within KitClick section
+	OffsetClickStartRange2 = uint32(0x00000016) // Offset within KitClick section
 	OffsetTempo            = uint32(0x00000056) // 4-nibble 20.0-260.0 (200-2600)
 	OffsetClickMode        = uint32(0x00000000)
 	OffsetClickVol         = uint32(0x00000006)
@@ -697,15 +698,30 @@ func (c *linuxMidiClient) SetKitPadLinkReceive(kitIdx int, padIdx int, rx int) e
 }
 
 // SetKitClickStartRange sets the Click Start Pad Range1 (0..19) for a given kit.
-func (c *linuxMidiClient) SetKitClickStartRange(kitIdx int, padRange int) error {
-	if padRange > 19 {
-		return fmt.Errorf("pad range %d out of bounds (0..19)", padRange)
+func (c *linuxMidiClient) SetKitClickStartRangeFrom(kitIdx int, from int) error {
+	if from > 19 {
+		return fmt.Errorf("pad range %d out of bounds (0..19)", from)
 	}
 
 	// Calculate target address within KitClick section (KitClick = 0x00000300)
 	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickStartRange2)
 
-	data := []byte{byte(padRange)}
+	data := []byte{byte(from)}
+
+	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
+	return c.conn.sendSysEx(sysex)
+}
+
+// SetKitClickStartRange sets the Click Start Pad Range1 (0..19) for a given kit.
+func (c *linuxMidiClient) SetKitClickStartRangeTo(kitIdx int, to int) error {
+	if to > 19 {
+		return fmt.Errorf("pad range %d out of bounds (0..19)", to)
+	}
+
+	// Calculate target address within KitClick section (KitClick = 0x00000300)
+	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickStartRange1)
+
+	data := []byte{byte(to)}
 
 	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
 	return c.conn.sendSysEx(sysex)

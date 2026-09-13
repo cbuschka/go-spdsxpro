@@ -4,7 +4,11 @@
       "slot": 50,
       "name": "Unsere Zeit",
       "click": {
-        "tempo": 160
+        "tempo": 160,
+        "startPat": {
+          "from": 1,
+          "to": 1
+        }
       },
       "padLinks": [
         {
@@ -37,7 +41,11 @@
       "slot": 53,
       "name": "Hallo Spacko",
       "click": {
-        "tempo": 140
+        "tempo": 140,
+        "startPat": {
+          "from": 1,
+          "to": 2
+        }
       },
       "padLinks": [
         {
@@ -56,7 +64,11 @@
       "slot": 54,
       "name": "Droge",
       "click": {
-        "tempo": 140
+        "tempo": 140,
+        "startPat": {
+          "from": 1,
+          "to": 1
+        }
       }
     }
   ]

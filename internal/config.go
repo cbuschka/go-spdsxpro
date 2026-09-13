@@ -17,9 +17,14 @@ type JsonKit struct {
 	PadLinks []JsonKitPadLink `json:"padLinks"`
 }
 
+type JsonKitClickStartPad struct {
+	From int `json:"from"`
+	To   int `json:"to"`
+}
+
 type JsonKitClick struct {
-	Tempo         uint16 `json:"tempo"`
-	PadStartRange int    `json:"padStartRange"`
+	Tempo    uint16               `json:"tempo"`
+	StartPad JsonKitClickStartPad `json:"startPat"`
 }
 
 type JsonKitPadLink struct {
