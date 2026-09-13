@@ -19,6 +19,9 @@ type Client interface {
 	SetKitSubTitle(kitIdx int, name string) error
 	SetKitClickTempo(kidIdx int, tempoBpm float64) error
 	GetKitClickTempo(kidIdx int) (float64, error)
+	SetKitPadLinkSend(kitIdx int, padIdx int, tx int) error
+	SetKitPadLinkReceive(kitIdx int, padIdx int, rx int) error
+	SetKitClickStartRange(kitIdx int, padRange int) error
 }
 
 type Kit struct {

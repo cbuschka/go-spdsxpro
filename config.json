@@ -1,39 +1,63 @@
 {
   "kits": [
-	{
-		"slot": 50,
-		"name": "Unsere Zeit",
-		"click": {
-			"tempo": 160
-		}
-	},
-	{
-		"slot": 51,
-		"name": "Stille Helden",
-		"click": {
-			"tempo": 182
-		}
-	},
-	{
-		"slot": 52,
-		"name": "Hey Junge",
-		"click": {
-			"tempo": 170
-		}
-	},
-	{
-		"slot": 53,
-		"name": "Hallo Spacko",
-		"click": {
-			"tempo": 140
-		}
-	},
-	{
-		"slot": 54,
-		"name": "Droge",
-		"click": {
-			"tempo": 140
-		}
-	}
+    {
+      "slot": 50,
+      "name": "Unsere Zeit",
+      "click": {
+        "tempo": 160
+      },
+      "padLinks": [
+        {
+          "padIndex": 0,
+          "tx": 1,
+          "rx": 0
+        },
+        {
+          "padIndex": 1,
+          "tx": 0,
+          "rx": 1
+        }
+      ]
+    },
+    {
+      "slot": 51,
+      "name": "Stille Helden",
+      "click": {
+        "tempo": 182
+      }
+    },
+    {
+      "slot": 52,
+      "name": "Hey Junge",
+      "click": {
+        "tempo": 170
+      }
+    },
+    {
+      "slot": 53,
+      "name": "Hallo Spacko",
+      "click": {
+        "tempo": 140
+      },
+      "padLinks": [
+        {
+          "padIndex": 0,
+          "tx": 1,
+          "rx": 0
+        },
+        {
+          "padIndex": 1,
+          "tx": 0,
+          "rx": 1
+        }
+      ]
+    },
+    {
+      "slot": 54,
+      "name": "Droge",
+      "click": {
+        "tempo": 140
+      }
+    }
   ]
 }

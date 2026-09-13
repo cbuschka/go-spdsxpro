@@ -44,9 +44,12 @@ const (
 	KitCommon     = uint32(0x00000000)
 	KitClick      = uint32(0x00000300)
 
-	OffsetTempo     = uint32(0x00000056) // 4-nibble 20.0-260.0 (200-2600)
-	OffsetClickMode = uint32(0x00000000)
-	OffsetClickVol  = uint32(0x00000006)
+	OffsetClickStartRange2 = uint32(0x0000000E) // Offset within KitClick section
+	OffsetTempo            = uint32(0x00000056) // 4-nibble 20.0-260.0 (200-2600)
+	OffsetClickMode        = uint32(0x00000000)
+	OffsetClickVol         = uint32(0x00000006)
+	OffsetPadLinkTx        = uint32(0x0000000C)
+	OffsetPadLinkRx        = uint32(0x0000000D)
 )
 
 // Universal Non-Realtime SysEx Identity Request (Ping)
@@ -630,4 +633,78 @@ func decodeNibbledInt16Signed(b []byte) int16 {
 		uint16(b[2]&0x0F)<<4 |
 		uint16(b[3]&0x0F)
 	return int16(uVal)
+}
+
+// GetKitPadLink fetches PadLinkTx and PadLinkRx for a specified kit (1..200) and pad (1..19)
+func (c *linuxMidiClient) GetKitPadLinkSend(kitIdx int, padIdx int) (int, error) {
+	padOffset := uint32(0x00002000) + uint32(padIdx)*uint32(0x00000100)
+	addr := c.getKitParamAddress(kitIdx, padOffset, 0x0000000C)
+	size := [4]byte{0x00, 0x00, 0x00, 0x02}
+
+	sysex := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+	reply, err := c.conn.TransceiveSysEx(sysex)
+	if err != nil {
+		return -1, err
+	}
+
+	if len(reply) < 17 {
+		return -1, fmt.Errorf("unexpected reply length: %d bytes", len(reply))
+	}
+
+	return int(reply[13]), err
+}
+
+// GetKitPadLink fetches PadLinkTx and PadLinkRx for a specified kit (1..200) and pad (1..19)
+func (c *linuxMidiClient) GetKitPadLinkReceive(kitIdx int, padIdx int) (int, error) {
+	padOffset := uint32(0x00002000) + uint32(padIdx)*uint32(0x00000100)
+	addr := c.getKitParamAddress(kitIdx, padOffset, 0x0000000C)
+	size := [4]byte{0x00, 0x00, 0x00, 0x02}
+
+	sysex := c.conn.encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+	reply, err := c.conn.TransceiveSysEx(sysex)
+	if err != nil {
+		return -1, err
+	}
+
+	if len(reply) < 17 {
+		return -1, fmt.Errorf("unexpected reply length: %d bytes", len(reply))
+	}
+
+	return int(reply[14]), err
+}
+
+// SetKitPadLink updates both PadLink Tx and Rx simultaneously for a kit and pad
+func (c *linuxMidiClient) SetKitPadLinkSend(kitIdx int, padIdx int, tx int) error {
+	padOffset := uint32(0x00002000) + uint32(padIdx)*uint32(0x00000100)
+	addr := c.getKitParamAddress(kitIdx, padOffset, OffsetPadLinkTx)
+
+	data := []byte{byte(tx)}
+
+	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
+	return c.conn.sendSysEx(sysex)
+}
+
+func (c *linuxMidiClient) SetKitPadLinkReceive(kitIdx int, padIdx int, rx int) error {
+	padOffset := uint32(0x00002000) + uint32(padIdx)*uint32(0x00000100)
+	addr := c.getKitParamAddress(kitIdx, padOffset, OffsetPadLinkRx)
+
+	data := []byte{byte(rx)}
+
+	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
+	return c.conn.sendSysEx(sysex)
+}
+
+// SetKitClickStartRange sets the Click Start Pad Range1 (0..19) for a given kit.
+func (c *linuxMidiClient) SetKitClickStartRange(kitIdx int, padRange int) error {
+	if padRange > 19 {
+		return fmt.Errorf("pad range %d out of bounds (0..19)", padRange)
+	}
+
+	// Calculate target address within KitClick section (KitClick = 0x00000300)
+	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickStartRange2)
+
+	data := []byte{byte(padRange)}
+
+	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
+	return c.conn.sendSysEx(sysex)
 }
