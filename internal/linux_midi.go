@@ -559,13 +559,13 @@ func (c *linuxMidiClient) SetKitName(kitNum int, name string) error {
 func (c *linuxMidiClient) SetKitSubTitle(kitNum int, subTitle string) error {
 	addr := c.getKitParamAddress(kitNum, KitCommon, ParamOffsetKitSubTitle)
 
-	// Truncate or pad string to 16 ASCII characters
+	// Use 0x00 (NUL) for empty padding instead of 0x20 (Space)
 	padded := make([]byte, 16)
 	for i := 0; i < len(padded); i++ {
 		if i < len(subTitle) {
 			padded[i] = subTitle[i]
 		} else {
-			padded[i] = 0x20 // Space padding
+			padded[i] = 0x00 // NUL padding clears trailing/empty characters
 		}
 	}
 

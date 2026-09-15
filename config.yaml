@@ -1,5 +1,6 @@
 kits:
   - name: Unsere Zeit
+    subtitle: Intro + Unsere Zeit
     slot: 50
     click:
       mode: 0
