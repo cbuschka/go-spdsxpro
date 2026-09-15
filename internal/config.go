@@ -1,46 +1,47 @@
 package internal
 
 import (
-	"encoding/json"
 	"io"
+
+	"gopkg.in/yaml.v3"
 )
 
-type JsonConfig struct {
-	Kits []JsonKit `json:"kits"`
+type Config struct {
+	Kits []YamlKit `json:"kits" yaml:"kits"`
 }
 
-type JsonKit struct {
-	Slot     *int             `json:"slot"`
-	Name     string           `json:"name"`
-	Subtitle string           `json:"subtitle"`
-	Click    JsonKitClick     `json:"click"`
-	PadLinks []JsonKitPadLink `json:"padLinks"`
+type YamlKit struct {
+	Slot     *int             `json:"slot" yaml:"slot"`
+	Name     string           `json:"name" yaml:"name"`
+	Subtitle string           `json:"subtitle" yaml:"subtitle"`
+	Click    YamlKitClick     `json:"click" yaml:"click"`
+	PadLinks []YamlKitPadLink `json:"padLinks" yaml:"padLinks"`
 }
 
-type JsonKitClickStartPad struct {
-	From int `json:"from"`
-	To   int `json:"to"`
+type YamlKitClickStartPad struct {
+	From int `json:"from" yaml:"from"`
+	To   int `json:"to" yaml:"to"`
 }
 
-type JsonKitClick struct {
-	Tempo    uint16               `json:"tempo"`
-	StartPad JsonKitClickStartPad `json:"startPat"`
+type YamlKitClick struct {
+	Tempo    uint16               `json:"tempo" yaml:"tempo"`
+	StartPad YamlKitClickStartPad `json:"startPad" yaml:"startPad"` // Fixed typo from 'startPat'
 }
 
-type JsonKitPadLink struct {
-	PadIndex int `json:"padIndex"`
-	Tx       int `json:"tx"`
-	Rx       int `json:"rx"`
+type YamlKitPadLink struct {
+	PadIndex int `json:"padIndex" yaml:"padIndex"`
+	Tx       int `json:"tx" yaml:"tx"`
+	Rx       int `json:"rx" yaml:"rx"`
 }
 
-func ReadConfig(in io.Reader) (*JsonConfig, error) {
+func ReadConfig(in io.Reader) (*Config, error) {
 	all, err := io.ReadAll(in)
 	if err != nil {
 		return nil, err
 	}
 
-	config := JsonConfig{}
-	err = json.Unmarshal(all, &config)
+	config := Config{}
+	err = yaml.Unmarshal(all, &config)
 	if err != nil {
 		return nil, err
 	}

@@ -26,17 +26,6 @@ func run(configFile string) error {
 	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	log.Printf("Attempting to connect to SPD-SX PRO...")
-
-	// This MUST fail if no device is connected
-	client, err := spdsxpro.NewClient("/dev/snd/midiC1D0", clientopts.WithDebug(true))
-	if err != nil {
-		log.Fatalf("FAILED TO CONNECT: %v", err)
-	}
-	defer client.Close()
-
-	log.Printf("connected")
-
 	file, err := os.Open(configFile)
 	if err != nil {
 		return err
@@ -47,6 +36,18 @@ func run(configFile string) error {
 	if err != nil {
 		return err
 	}
+	log.Printf("Config loaded")
+
+	log.Printf("Attempting to connect to SPD-SX PRO...")
+
+	// This MUST fail if no device is connected
+	client, err := spdsxpro.NewClient("/dev/snd/midiC1D0", clientopts.WithDebug(true))
+	if err != nil {
+		log.Fatalf("FAILED TO CONNECT: %v", err)
+	}
+	defer client.Close()
+
+	log.Printf("connected")
 
 	for _, kit := range config.Kits {
 		kitIdx := *kit.Slot - 1
