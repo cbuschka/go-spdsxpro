@@ -23,8 +23,12 @@ type Client interface {
 	SetKitPadLinkReceive(kitIdx int, padIdx int, rx int) error
 	SetKitClickStartRangeFrom(kitIdx int, from int) error
 	SetKitClickStartRangeTo(kitIdx int, to int) error
-	SetKitClickMode(kitIdx int, mode int) error
 	GetKitClickMode(kitIdx int) (int, error)
+	SetKitClickMode(kitIdx int, mode int) error
+	GetKitClickSound(kitIdx int) (int, error)
+	SetKitClickSound(kitIdx int, mode int) error
+	GetKitClickVolume(kitIdx int) (int, error)
+	SetKitClickVolume(kitIdx int, volume int) error
 }
 type Kit struct {
 	Number   int

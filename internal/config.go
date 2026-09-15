@@ -24,6 +24,9 @@ type YamlKitClickStartPad struct {
 }
 
 type YamlKitClick struct {
+	Mode     uint8                `json:"mode" yaml:"mode"`
+	Sound    uint8                `json:"sound" yaml:"sound"`
+	Volume   int16                `json:"volume" yaml:"volume"`
 	Tempo    uint16               `json:"tempo" yaml:"tempo"`
 	StartPad YamlKitClickStartPad `json:"startPad" yaml:"startPad"`
 }

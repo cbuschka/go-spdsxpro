@@ -33,20 +33,24 @@ const (
 	ParamOffsetKitName     = uint32(0x00000000)
 	ParamOffsetKitSubTitle = uint32(0x00000010)
 
+	// Sub-section offsets (B3 position)
+	KitCommon  uint32 = 0x00000000 // 00 00 00 00
+	KitControl uint32 = 0x00000200 // 00 00 02 00
+	KitClick   uint32 = 0x00000300 // 00 00 03 00
+	KitMidi    uint32 = 0x00000400 // 00 00 04 00
+
 	KitBaseAddres = uint32(0x04000000)
 	KitSize       = uint32(0x00020000)
-	KitCommon     = uint32(0x00000000)
-	KitClick      = uint32(0x00000300)
 
-	OffsetClickVolume      = uint32(0x00000009) // 4 nibbles: -601..60 (-INF, -60.0dB..+6.0dB)
-	OffsetClickPan         = uint32(0x0000000B) // 4 nibbles: -15..15 (L15..C..R15)
-	OffsetClickStartRange1 = uint32(0x0000000E) // Offset within KitClick section
-	OffsetClickStartRange2 = uint32(0x00000016) // Offset within KitClick section
-	OffsetTempo            = uint32(0x00000056) // 4-nibble 20.0-260.0 (200-2600)
-	OffsetClickMode        = uint32(0x00000000)
-	OffsetClickVol         = uint32(0x00000006)
-	OffsetPadLinkTx        = uint32(0x0000000C)
-	OffsetPadLinkRx        = uint32(0x0000000D)
+	OffsetClickMode        uint32 = 0x00000000         // 00 00
+	OffsetClickSound       uint32 = 0x00000001         // 00 01
+	OffsetClickVolume             = uint32(0x00000006) // 4 nibbles: -601..60 (-INF, -60.0dB..+6.0dB)
+	OffsetClickPan                = uint32(0x0000000B) // 4 nibbles: -15..15 (L15..C..R15)
+	OffsetClickStartRange1        = uint32(0x0000000E) // Offset within KitClick section
+	OffsetClickStartRange2        = uint32(0x00000016) // Offset within KitClick section
+	OffsetTempo                   = uint32(0x00000056) // 4-nibble 20.0-260.0 (200-2600)
+	OffsetPadLinkTx               = uint32(0x0000000C)
+	OffsetPadLinkRx               = uint32(0x0000000D)
 )
 
 func (c *linuxMidiClient) parseActiveKitResponse(resp []byte) (int, error) {
@@ -183,6 +187,32 @@ func (c *linuxMidiClient) parseKitNameResponse(resp []byte) (string, string, err
 	return name, subTitle, nil
 }
 
+func (c *linuxMidiClient) getKitParamAddress(kitNum int, subsectionOffset uint32, paramOffset uint32) [4]byte {
+	idx := kitNum - 1 // 1-based (1..200) -> 0-based (0..199)
+
+	// Base Byte 1 starts at 0x04. Carries over to 0x05 at Kit 65, 0x06 at Kit 129
+	b1 := byte(0x04 + (idx / 64))
+
+	// Base Byte 2 increments by 0x02 per kit (wraps every 64 kits at 128/0x80)
+	b2 := byte((idx * 2) % 128)
+
+	// Combine section offset and parameter offset cleanly
+	totalOffset := subsectionOffset + paramOffset
+
+	// Extract offset byte additions
+	offB2 := byte((totalOffset >> 16) & 0x7F)
+	offB3 := byte((totalOffset >> 8) & 0x7F)
+	offB4 := byte(totalOffset & 0x7F)
+
+	return [4]byte{
+		b1,
+		b2 + offB2,
+		offB3,
+		offB4,
+	}
+}
+
+/*
 func (c *linuxMidiClient) getKitParamAddress(kitIdx int, subsectionOffset uint32, paramOffset uint32) [4]byte {
 
 	// Base Address 0x04 0x00 0x00 0x00 in 7-bit linear space:
@@ -203,6 +233,7 @@ func (c *linuxMidiClient) getKitParamAddress(kitIdx int, subsectionOffset uint32
 		byte(totalAddr & 0x7F),         // Byte 4
 	}
 }
+*/
 
 func (c *linuxMidiClient) GetKitList() ([]types.Kit, error) {
 	var kits []types.Kit
@@ -702,13 +733,13 @@ func (c *linuxMidiClient) SetKitClickStartRangeTo(kitIdx int, to int) error {
 	return c.conn.sendSysEx(sysex)
 }
 
-// SetKitClickMode sets the Click Mode (0 = PRESET, 1 = WAVE, 2 = CLICK-TRACK) for a kit
-func (c *linuxMidiClient) SetKitClickMode(kitIdx int, mode int) error {
-	if mode > 2 {
-		return fmt.Errorf("click mode %d out of bounds (0..2: PRESET, WAVE, CLICK-TRACK)", mode)
+// SetKitClickMode sets Click Mode for a kit (0 = PRESET, 1 = WAVE, 2 = CLICK-TRACK)
+func (c *linuxMidiClient) SetKitClickMode(kitNum int, mode int) error {
+	if mode < 0 || mode > 2 {
+		return fmt.Errorf("click mode %d out of bounds (0..2)", mode)
 	}
 
-	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickMode)
+	addr := c.getKitParamAddress(kitNum, KitClick, OffsetClickMode)
 	data := []byte{byte(mode)}
 
 	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
@@ -733,21 +764,8 @@ func (c *linuxMidiClient) GetKitClickMode(kitIdx int) (int, error) {
 	return int(reply[13]), nil
 }
 
-// SetKitClickVolume sets the Click Volume in tenths of dB (-601 = -INF, -600..60 = -60.0dB..+6.0dB)
-func (c *linuxMidiClient) SetKitClickVolume(kidIdx int, volumeDb int) error {
-	if volumeDb < -601 || volumeDb > 60 {
-		return fmt.Errorf("volume %d out of bounds (-601..60)", volumeDb)
-	}
-
-	addr := c.getKitParamAddress(kidIdx, KitClick, OffsetClickVolume)
-	data := c.encodeNibbledUint16(uint16(int16(volumeDb)))
-
-	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
-	return c.conn.sendSysEx(sysex)
-}
-
 // GetKitClickVolume retrieves the Click Volume (-601 = -INF, -600..60 = -60.0dB..+6.0dB)
-func (c *linuxMidiClient) GetKitClickVolume(kidIdx int) (int16, error) {
+func (c *linuxMidiClient) GetKitClickVolume(kidIdx int) (int, error) {
 	addr := c.getKitParamAddress(kidIdx, KitClick, OffsetClickVolume)
 	size := [4]byte{0x00, 0x00, 0x00, 0x04}
 
@@ -767,7 +785,7 @@ func (c *linuxMidiClient) GetKitClickVolume(kidIdx int) (int16, error) {
 		uint16(data[2]&0x0F)<<4 |
 		uint16(data[3]&0x0F)
 
-	return int16(rawVal), nil
+	return int(rawVal), nil
 }
 
 // SetKitClickPan sets the Click Pan position (-15 = L15, 0 = Center, 15 = R15)
@@ -818,4 +836,52 @@ func keepASCIIOnly(s string) string {
 	}
 
 	return builder.String()
+}
+
+func (c *linuxMidiClient) SetKitClickSound(kitIdx int, sound int) error {
+	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickSound)
+	data := []byte{byte(sound)}
+
+	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
+	return c.conn.sendSysEx(sysex)
+}
+
+func (c *linuxMidiClient) GetKitClickSound(kitIdx int) (int, error) {
+	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickSound)
+	size := [4]byte{0x00, 0x00, 0x00, 0x01}
+
+	sysex := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+	reply, err := c.conn.TransceiveSysEx(sysex)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(reply) < 16 {
+		return 0, fmt.Errorf("unexpected reply length: %d bytes", len(reply))
+	}
+
+	return int(reply[13]), nil
+}
+
+// SetKitClickVolume sets Click Volume (-600 to +60, corresponding to -60.0 dB to +6.0 dB)
+func (c *linuxMidiClient) SetKitClickVolume(kitNum int, volume int) error {
+	if volume < -600 || volume > 60 {
+		return fmt.Errorf("click volume %d out of bounds (-600..60)", volume)
+	}
+
+	addr := c.getKitParamAddress(kitNum, KitClick, OffsetClickVolume)
+	if volume < 0 {
+		volume = volume + 0x10000
+	}
+
+	// Split into 4 Roland 7-bit nibbles
+	data := []byte{
+		byte((volume >> 12) & 0x0F),
+		byte((volume >> 8) & 0x0F),
+		byte((volume >> 4) & 0x0F),
+		byte(volume & 0x0F),
+	}
+
+	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
+	return c.conn.sendSysEx(sysex)
 }

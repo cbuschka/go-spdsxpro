@@ -2,6 +2,9 @@ kits:
   - name: Unsere Zeit
     slot: 50
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 160
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -10,6 +13,9 @@ kits:
   - name: Stille Helden
     slot: 51
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 182
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -18,6 +24,9 @@ kits:
   - name: Hey Junge
     slot: 52
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 170
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -26,6 +35,9 @@ kits:
   - name: Hallo Spacko
     slot: 53
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 140
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -34,6 +46,9 @@ kits:
   - name: Droge
     slot: 54
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 150
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -42,6 +57,9 @@ kits:
   - name: Barbie
     slot: 55
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -50,6 +68,9 @@ kits:
   - name: Kat.S.8
     slot: 56
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -58,6 +79,9 @@ kits:
   - name: Das System
     slot: 57
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 140
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -66,6 +90,9 @@ kits:
   - name: Nein
     slot: 58
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 150
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -74,6 +101,9 @@ kits:
   - name: Diese Welt
     slot: 59
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -82,6 +112,9 @@ kits:
   - name: Fr.d.13.
     slot: 60
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 140
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -90,6 +123,9 @@ kits:
   - name: Schlag Dich selbst
     slot: 61
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -98,6 +134,9 @@ kits:
   - name: Wahre Freunde
     slot: 62
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 160
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -106,6 +145,9 @@ kits:
   - name: Jeder gg jeden
     slot: 63
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 145
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -114,6 +156,9 @@ kits:
   - name: Getrennte Wege
     slot: 64
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 95
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -122,6 +167,9 @@ kits:
   - name: Klaus
     slot: 65
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 100
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -130,6 +178,9 @@ kits:
   - name: Kenneth's Song
     slot: 66
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -138,6 +189,9 @@ kits:
   - name: Facebook
     slot: 67
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 140
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -146,6 +200,9 @@ kits:
   - name: Morgen
     slot: 68
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 130
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -154,6 +211,9 @@ kits:
   - name: Seit j. Maerz
     slot: 69
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 140
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -162,6 +222,9 @@ kits:
   - name: Nachwuchs-Nazis
     slot: 70
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -170,6 +233,9 @@ kits:
   - name: Maerchenwelt
     slot: 71
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 150
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -178,6 +244,9 @@ kits:
   - name: Alkohol
     slot: 72
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -186,6 +255,9 @@ kits:
   - name: Hochseil
     slot: 73
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 150
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -194,6 +266,9 @@ kits:
   - name: Danke
     slot: 74
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 110
       startPad: { from: 1, to: 1 }
     padLinks:
@@ -202,6 +277,9 @@ kits:
   - name: Pop-Kommerz
     slot: 75
     click:
+      mode: 0
+      sound: 0
+      volume: 0
       tempo: 140
       startPad: { from: 1, to: 1 }
     padLinks:

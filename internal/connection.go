@@ -94,6 +94,8 @@ func (conn *Connection) sendSysEx(msg []byte) error {
 		return fmt.Errorf("invalid end byte: expected 0xF7, got 0x%02X", msg[len(msg)-1])
 	}
 
+	log.Debugf("sending msg: %X", msg)
+
 	// 2. Write bytes out to the MIDI transport
 	n, err := conn.dev.Write(msg)
 	if err != nil {

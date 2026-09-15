@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"go-spdsxpro/internal"
+	"go-spdsxpro/internal/log"
 	"go-spdsxpro/types/clientopts"
-	"log"
 	"math"
 	"os"
 	"time"
@@ -16,6 +16,7 @@ import (
 
 func main() {
 	err := run(os.Args[1])
+	log.SetDebug(true)
 	if err != nil {
 		log.Fatalf("Loading config failed: %v", err)
 	}
@@ -36,9 +37,9 @@ func run(configFile string) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Config loaded")
+	log.Infof("Config loaded")
 
-	log.Printf("Attempting to connect to SPD-SX PRO...")
+	log.Infof("Attempting to connect to SPD-SX PRO...")
 
 	// This MUST fail if no device is connected
 	client, err := spdsxpro.NewClient("/dev/snd/midiC1D0", clientopts.WithDebug(true))
@@ -47,41 +48,59 @@ func run(configFile string) error {
 	}
 	defer client.Close()
 
-	log.Printf("connected")
+	log.Infof("connected")
 
 	for _, kit := range config.Kits {
 		kitIdx := *kit.Slot - 1
-		log.Printf("Loading Kit: %d %s", kitIdx, kit.Name)
+		log.Infof("Loading Kit: %d %s", kitIdx, kit.Name)
 
 		err = client.SetKitName(kitIdx, kit.Name)
 		if err != nil {
 			return err
 		}
-		log.Printf("Kit name set: %d %s", kitIdx, kit.Name)
+		log.Infof("Kit name set: %d %s", kitIdx, kit.Name)
 
 		err = client.SetKitSubTitle(kitIdx, kit.Subtitle)
 		if err != nil {
 			return err
 		}
-		log.Printf("Kit subtitle set: %d %s", kitIdx, kit.Subtitle)
+		log.Infof("Kit subtitle set: %d %s", kitIdx, kit.Subtitle)
+
+		err = client.SetKitClickMode(kitIdx, int(kit.Click.Mode))
+		if err != nil {
+			return err
+		}
+		log.Infof("Kit click mode set: %d %d", kitIdx, kit.Click.Mode)
+
+		err = client.SetKitClickSound(kitIdx, int(kit.Click.Sound))
+		if err != nil {
+			return err
+		}
+		log.Infof("Kit click sound set: %d %d", kitIdx, kit.Click.Sound)
+
+		err = client.SetKitClickVolume(kitIdx, int(kit.Click.Volume))
+		if err != nil {
+			return err
+		}
+		log.Infof("Kit click volume set: %d %d", kitIdx, kit.Click.Volume)
 
 		err = client.SetKitClickTempo(kitIdx, float64(kit.Click.Tempo))
 		if err != nil {
 			return err
 		}
-		log.Printf("Kit click set: %d %d", kitIdx, kit.Click.Tempo)
+		log.Infof("Kit click tempo set: %d %d", kitIdx, kit.Click.Tempo)
 
 		err = client.SetKitClickStartRangeFrom(kitIdx, kit.Click.StartPad.From)
 		if err != nil {
 			return err
 		}
-		log.Printf("Kit %d click pad start range set: %d", kitIdx, kit.Click.StartPad.From)
+		log.Infof("Kit %d click pad start range set: %d", kitIdx, kit.Click.StartPad.From)
 
 		err = client.SetKitClickStartRangeTo(kitIdx, kit.Click.StartPad.To)
 		if err != nil {
 			return err
 		}
-		log.Printf("Kit %d click pad start range set: %d", kitIdx, kit.Click.StartPad.To)
+		log.Infof("Kit %d click pad start range set: %d", kitIdx, kit.Click.StartPad.To)
 
 		for _, padLink := range kit.PadLinks {
 			padIndex := padLink.PadIndex
@@ -90,16 +109,17 @@ func run(configFile string) error {
 			if err != nil {
 				return err
 			}
-			log.Printf("Kit %d pad link %d set tx: %d", kitIdx, padIndex, padLink.Tx)
+			log.Infof("Kit %d pad link %d set tx: %d", kitIdx, padIndex, padLink.Tx)
 
 			err = client.SetKitPadLinkReceive(kitIdx, padIndex, padLink.Rx)
 			if err != nil {
 				return err
 			}
-			log.Printf("Kit %d pad link %d set rx: %d", kitIdx, padIndex, padLink.Rx)
+			log.Infof("Kit %d pad link %d set rx: %d", kitIdx, padIndex, padLink.Rx)
 
 		}
 
+		break
 	}
 
 	/*

@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-var debugEnabled = false
+var debugEnabled = true
 
 func SetDebug(enabled bool) {
 	debugEnabled = enabled
