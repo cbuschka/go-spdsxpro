@@ -1,44 +1,41 @@
 kits:
-  - slot: 50
-    name: Unsere Zeit
+  - name: Unsere Zeit
+    slot: 50
     click:
       tempo: 160
-      startPat:
-        from: 1
-        to: 1
+      startPad: { from: 1, to: 1 }
     padLinks:
-      - padIndex: 0
-        tx: 1
-        rx: 0
-      - padIndex: 1
-        tx: 0
-        rx: 1
-  - slot: 51
-    name: Stille Helden
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Stille Helden
+    slot: 51
     click:
       tempo: 182
-  - slot: 52
-    name: Hey Junge
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Hey Junge
+    slot: 52
     click:
       tempo: 170
-  - slot: 53
-    name: Hallo Spacko
-    click:
-      tempo: 140
-      startPat:
-        from: 1
-        to: 2
+      startPad: { from: 1, to: 1 }
     padLinks:
-      - padIndex: 0
-        tx: 1
-        rx: 0
-      - padIndex: 1
-        tx: 0
-        rx: 1
-  - slot: 54
-    name: Droge
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Hallo Spacko
+    slot: 53
     click:
       tempo: 140
-      startPat:
-        from: 1
-        to: 1
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Droge
+    slot: 54
+    click:
+      tempo: 140
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }

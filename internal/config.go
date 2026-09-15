@@ -25,7 +25,7 @@ type YamlKitClickStartPad struct {
 
 type YamlKitClick struct {
 	Tempo    uint16               `json:"tempo" yaml:"tempo"`
-	StartPad YamlKitClickStartPad `json:"startPad" yaml:"startPad"` // Fixed typo from 'startPat'
+	StartPad YamlKitClickStartPad `json:"startPad" yaml:"startPad"`
 }
 
 type YamlKitPadLink struct {
