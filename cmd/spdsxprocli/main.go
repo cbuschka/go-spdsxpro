@@ -118,8 +118,6 @@ func run(configFile string) error {
 			log.Infof("Kit %d pad link %d set rx: %d", kitIdx, padIndex, padLink.Rx)
 
 		}
-
-		break
 	}
 
 	/*
