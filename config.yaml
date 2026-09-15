@@ -34,6 +34,174 @@ kits:
   - name: Droge
     slot: 54
     click:
+      tempo: 150
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Barbie
+    slot: 55
+    click:
+      tempo: 120
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Kat.S.8
+    slot: 56
+    click:
+      tempo: 120
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Das System
+    slot: 57
+    click:
+      tempo: 140
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Nein
+    slot: 58
+    click:
+      tempo: 150
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Diese Welt
+    slot: 59
+    click:
+      tempo: 120
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Fr.d.13.
+    slot: 60
+    click:
+      tempo: 140
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Schlag Dich selbst
+    slot: 61
+    click:
+      tempo: 120
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Wahre Freunde
+    slot: 62
+    click:
+      tempo: 160
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Jeder gg jeden
+    slot: 63
+    click:
+      tempo: 145
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Getrennte Wege
+    slot: 64
+    click:
+      tempo: 95
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Klaus
+    slot: 65
+    click:
+      tempo: 100
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Kenneth's Song
+    slot: 66
+    click:
+      tempo: 120
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Facebook
+    slot: 67
+    click:
+      tempo: 140
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Morgen
+    slot: 68
+    click:
+      tempo: 130
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Seit j. Maerz
+    slot: 69
+    click:
+      tempo: 140
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Nachwuchs-Nazis
+    slot: 70
+    click:
+      tempo: 120
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Maerchenwelt
+    slot: 71
+    click:
+      tempo: 150
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Alkohol
+    slot: 72
+    click:
+      tempo: 120
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Hochseil
+    slot: 73
+    click:
+      tempo: 150
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Danke
+    slot: 74
+    click:
+      tempo: 110
+      startPad: { from: 1, to: 1 }
+    padLinks:
+      - { padIndex: 0, tx: 1, rx: 0 }
+      - { padIndex: 1, tx: 0, rx: 1 }
+  - name: Pop-Kommerz
+    slot: 75
+    click:
       tempo: 140
       startPad: { from: 1, to: 1 }
     padLinks:

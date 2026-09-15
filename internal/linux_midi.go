@@ -1,13 +1,14 @@
 package internal
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"go-spdsxpro/internal/log"
 	"go-spdsxpro/types"
 	"os"
+	"strings"
 	"time"
+	"unicode"
 )
 
 const (
@@ -182,28 +183,25 @@ func (c *linuxMidiClient) parseKitNameResponse(resp []byte) (string, string, err
 	return name, subTitle, nil
 }
 
-// getKitNameAddress computes the 4-byte Roland address for Kit N (1-indexed: 1..200)
 func (c *linuxMidiClient) getKitParamAddress(kitIdx int, subsectionOffset uint32, paramOffset uint32) [4]byte {
 
-	/*
-		idx := kitNum - 1 // 0-based index
+	// Base Address 0x04 0x00 0x00 0x00 in 7-bit linear space:
+	kitBaseAddr := uint32(0x04) << 21
 
-		// Each kit increments Byte 2 by 0x02
-		stride := idx * 2
+	// Kit Stride = 0x02 in Byte 2 position
+	// In 7-bit space, shifting left by 14 bits targets Byte 2:
+	kitStride := uint32(2) << 14
 
-		b1 := byte(0x04 + (stride / 128)) // Carry over to B1 after 64 kits
-		b2 := byte(stride % 128)          // B2 steps by 0x02 per kit
-		b3 := byte(0x00)
-		b4 := byte(0x00) // Kit Name sub-offset
+	// Calculate total address in 7-bit linear space
+	totalAddr := kitBaseAddr + (uint32(kitIdx) * kitStride) + subsectionOffset + paramOffset
 
-		return [4]byte{b1, b2, b3, b4}
-	*/
-
-	addr := KitBaseAddres + uint32(kitIdx)*KitSize + subsectionOffset + paramOffset
-
-	b := make([]byte, 4)
-	binary.BigEndian.PutUint32(b, addr)
-	return [4]byte(b)
+	// Convert 7-bit linear integer back into 4 discrete 7-bit bytes
+	return [4]byte{
+		byte((totalAddr >> 21) & 0x7F), // Byte 1 (Carries 0x04 -> 0x05 at Kit 65)
+		byte((totalAddr >> 14) & 0x7F), // Byte 2 (Increments 0x00, 0x02, ..., wraps at 0x7E)
+		byte((totalAddr >> 7) & 0x7F),  // Byte 3
+		byte(totalAddr & 0x7F),         // Byte 4
+	}
 }
 
 func (c *linuxMidiClient) GetKitList() ([]types.Kit, error) {
@@ -509,11 +507,9 @@ func (c *linuxMidiClient) encodeNibbleASCII(str string, paddedLen int) []byte {
 }
 
 func (c *linuxMidiClient) SetKitName(kitNum int, name string) error {
-	if kitNum < 1 || kitNum > TotalKits {
-		return fmt.Errorf("kit number %d out of bounds (1..%d)", kitNum, TotalKits)
-	}
-
 	addr := c.getKitParamAddress(kitNum, KitCommon, ParamOffsetKitName)
+
+	name = keepASCIIOnly(name)
 
 	// Truncate or pad string to 16 ASCII characters (Roland standard kit name length)
 	padded := make([]byte, 16)
@@ -809,4 +805,17 @@ func (c *linuxMidiClient) GetKitClickPan(kitIdx int) (int8, error) {
 		uint16(data[3]&0x0F)
 
 	return int8(int16(rawVal)), nil
+}
+
+func keepASCIIOnly(s string) string {
+	var builder strings.Builder
+	builder.Grow(len(s))
+
+	for _, r := range s {
+		if r <= unicode.MaxASCII {
+			builder.WriteRune(r)
+		}
+	}
+
+	return builder.String()
 }
