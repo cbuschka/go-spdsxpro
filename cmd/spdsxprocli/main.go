@@ -50,9 +50,19 @@ func run(configFile string) error {
 
 	log.Infof("connected")
 
+	startKitIdx, err := client.GetActiveKit()
+	if err != nil {
+		return err
+	}
+
 	for _, kit := range config.Kits {
 		kitIdx := *kit.Slot - 1
 		log.Infof("Loading Kit: %d %s", kitIdx, kit.Name)
+
+		err = client.SetActiveKit(kitIdx)
+		if err != nil {
+			return err
+		}
 
 		err = client.SetKitName(kitIdx, kit.Name)
 		if err != nil {
@@ -118,6 +128,11 @@ func run(configFile string) error {
 			log.Infof("Kit %d pad link %d set rx: %d", kitIdx, padIndex, padLink.Rx)
 
 		}
+	}
+
+	err = client.SetActiveKit(startKitIdx)
+	if err != nil {
+		return err
 	}
 
 	/*

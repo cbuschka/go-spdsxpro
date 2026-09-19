@@ -12,8 +12,9 @@ import (
 var ModelIDSPDSXPro = []byte{0x00, 0x00, 0x00, 0x00, 0x16}
 
 type Connection struct {
-	dev     *os.File
-	timeout time.Duration
+	dev       *os.File
+	timeout   time.Duration
+	sleepTime time.Duration
 }
 
 func (c *Connection) readSysEx() ([]byte, error) {
@@ -76,6 +77,7 @@ func (c *Connection) TransceiveSysEx(msg []byte) ([]byte, error) {
 	if _, err := c.dev.Write(msg); err != nil {
 		return nil, fmt.Errorf("write error: %w", err)
 	}
+	time.Sleep(c.sleepTime)
 
 	return c.readSysEx()
 }
@@ -105,6 +107,8 @@ func (conn *Connection) sendSysEx(msg []byte) error {
 	if n != len(msg) {
 		return fmt.Errorf("short write: wrote %d of %d bytes", n, len(msg))
 	}
+
+	time.Sleep(conn.sleepTime)
 
 	return nil
 }

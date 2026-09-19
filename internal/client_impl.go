@@ -7,7 +7,7 @@ import (
 )
 
 func NewClient(config *types.ClientConfig) (*linuxMidiClient, error) {
-	c := &linuxMidiClient{path: config.PortPath, deviceID: DefaultDeviceID, timeout: 2 * time.Second}
+	c := &linuxMidiClient{path: config.PortPath, deviceID: DefaultDeviceID, timeout: 2 * time.Second, sleepTime: time.Millisecond * 20}
 	log.SetDebug(config.Debug)
 	err := c.Connect()
 	if err != nil {

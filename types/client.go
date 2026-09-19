@@ -11,6 +11,7 @@ type Client interface {
 	Ping() error
 	Close() error
 	GetActiveKit() (int, error)
+	SetActiveKit(kitIdx int) error
 	GetKitList() ([]Kit, error)
 	GetSetlistList() ([]Setlist, error)
 	GetPadLayerVolume(kitIdx int, padIdx int, layer PadLayer) (int, error)

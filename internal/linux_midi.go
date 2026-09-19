@@ -16,7 +16,7 @@ const (
 	// Device IDs
 	DefaultDeviceID byte = 0x10
 
-	TotalKits = 200 // SPD-SX PRO supports 200 kits
+	TotalKits = 128 // SPD-SX PRO supports 200 kits
 
 	// SPD-SX PRO Kit Name is 16 characters long, which requires 32 nibble bytes in SysEx
 	KitNameLength     = 16
@@ -42,7 +42,7 @@ const (
 	KitBaseAddres = uint32(0x04000000)
 	KitSize       = uint32(0x00020000)
 
-	OffsetClickMode        uint32 = 0x00000000         // 00 00
+	OffsetClickMode        uint32 = 0x00000000         // 00 00 0=kit, 1=system
 	OffsetClickSound       uint32 = 0x00000001         // 00 01
 	OffsetClickVolume             = uint32(0x00000006) // 4 nibbles: -601..60 (-INF, -60.0dB..+6.0dB)
 	OffsetClickPan                = uint32(0x0000000B) // 4 nibbles: -15..15 (L15..C..R15)
@@ -87,10 +87,11 @@ func (c *linuxMidiClient) parseActiveKitResponse(resp []byte) (int, error) {
 }
 
 type linuxMidiClient struct {
-	path     string
-	deviceID byte
-	conn     *Connection
-	timeout  time.Duration
+	path      string
+	deviceID  byte
+	conn      *Connection
+	timeout   time.Duration
+	sleepTime time.Duration
 }
 
 func (c *linuxMidiClient) Connect() error {
@@ -120,6 +121,32 @@ func (c *linuxMidiClient) Close() error {
 	}
 
 	return nil
+}
+
+func (c *linuxMidiClient) SetActiveKit(kitIdx int) error {
+	// 7-byte fixed address for Current Active Kit
+	address := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03}
+
+	// Kit index value
+	data := []byte{byte(kitIdx & 0x7F)}
+
+	// Combine address + data for checksum calculation
+	body := append(address, data...)
+
+	// Roland 7-bit checksum calculation
+	var sum int
+	for _, b := range body {
+		sum += int(b)
+	}
+	checksum := byte((128 - (sum % 128)) & 0x7F)
+
+	// Header: F0 41 (Roland) 10 (DevID) 00 00 00 00 16 (SPD-SX PRO ID) 12 (DT1)
+	header := []byte{0xF0, 0x41, 0x10, 0x00, 0x00, 0x00, 0x00, 0x16, 0x12}
+
+	fullPacket := append(header, body...)
+	fullPacket = append(fullPacket, checksum, 0xF7)
+
+	return c.conn.sendSysEx(fullPacket)
 }
 
 func (c *linuxMidiClient) GetActiveKit() (int, error) {
@@ -187,14 +214,13 @@ func (c *linuxMidiClient) parseKitNameResponse(resp []byte) (string, string, err
 	return name, subTitle, nil
 }
 
-func (c *linuxMidiClient) getKitParamAddress(kitNum int, subsectionOffset uint32, paramOffset uint32) [4]byte {
-	idx := kitNum - 1 // 1-based (1..200) -> 0-based (0..199)
+func (c *linuxMidiClient) getKitParamAddress(kitIdx int, subsectionOffset uint32, paramOffset uint32) [4]byte {
 
 	// Base Byte 1 starts at 0x04. Carries over to 0x05 at Kit 65, 0x06 at Kit 129
-	b1 := byte(0x04 + (idx / 64))
+	b1 := byte(0x04 + (kitIdx / 64))
 
 	// Base Byte 2 increments by 0x02 per kit (wraps every 64 kits at 128/0x80)
-	b2 := byte((idx * 2) % 128)
+	b2 := byte((kitIdx * 2) % 128)
 
 	// Combine section offset and parameter offset cleanly
 	totalOffset := subsectionOffset + paramOffset
@@ -210,6 +236,32 @@ func (c *linuxMidiClient) getKitParamAddress(kitNum int, subsectionOffset uint32
 		offB3,
 		offB4,
 	}
+}
+
+// getKitParamAddress calculates the 4-byte SysEx address for a given kit and parameter offset.
+// Kit 001 (kitIdx = 0)  -> Base Address 04 02 00 00
+// Kit 049 (kitIdx = 48) -> Base Address 04 62 00 00
+func (c *linuxMidiClient) getKitParamAddressTempo(kitIdx int, subsectionOffset uint32, paramOffset uint32) [4]byte {
+	totalOffset := subsectionOffset + paramOffset
+
+	// Extract 7-bit MIDI offsets
+	offB1 := byte((totalOffset >> 21) & 0x7F)
+	offB2 := byte((totalOffset >> 14) & 0x7F)
+	offB3 := byte((totalOffset >> 7) & 0x7F)
+	offB4 := byte(totalOffset & 0x7F)
+
+	// Calculate base bytes from 0-indexed kitIdx:
+	// Each kit spans 0x02 00 00 in address space (2 MSB steps per kit).
+	// Base for Kit 1 (kitIdx 0) starts at 04 02 00 00.
+	rawB2 := uint32(0x02+(kitIdx*2)) + uint32(offB2)
+	rawB1 := uint32(0x04) + (rawB2 / 128) + uint32(offB1)
+
+	b1 := byte(rawB1 & 0x7F)
+	b2 := byte(rawB2 % 128)
+	b3 := offB3
+	b4 := offB4
+
+	return [4]byte{b1, b2, b3, b4}
 }
 
 /*
@@ -537,8 +589,8 @@ func (c *linuxMidiClient) encodeNibbleASCII(str string, paddedLen int) []byte {
 	return encoded
 }
 
-func (c *linuxMidiClient) SetKitName(kitNum int, name string) error {
-	addr := c.getKitParamAddress(kitNum, KitCommon, ParamOffsetKitName)
+func (c *linuxMidiClient) SetKitName(kitIdx int, name string) error {
+	addr := c.getKitParamAddress(kitIdx, KitCommon, ParamOffsetKitName)
 
 	name = keepASCIIOnly(name)
 
@@ -556,8 +608,8 @@ func (c *linuxMidiClient) SetKitName(kitNum int, name string) error {
 	return c.conn.sendSysEx(sysex)
 }
 
-func (c *linuxMidiClient) SetKitSubTitle(kitNum int, subTitle string) error {
-	addr := c.getKitParamAddress(kitNum, KitCommon, ParamOffsetKitSubTitle)
+func (c *linuxMidiClient) SetKitSubTitle(kitIdx int, subTitle string) error {
+	addr := c.getKitParamAddress(kitIdx, KitCommon, ParamOffsetKitSubTitle)
 
 	// Use 0x00 (NUL) for empty padding instead of 0x20 (Space)
 	padded := make([]byte, 16)
@@ -583,8 +635,7 @@ func (c *linuxMidiClient) encodeNibbledUint16(val uint16) []byte {
 }
 
 func (c *linuxMidiClient) GetKitClickTempo(kitIdx int) (float64, error) {
-
-	addr := c.getKitParamAddress(kitIdx, KitCommon, OffsetTempo)
+	addr := kitParamAddress(kitIdx, KitCommon, OffsetKitCommonTempo)
 	size := [4]byte{0x00, 0x00, 0x00, 0x04}
 
 	sysex := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
@@ -603,11 +654,17 @@ func (c *linuxMidiClient) GetKitClickTempo(kitIdx int) (float64, error) {
 }
 
 func (c *linuxMidiClient) SetKitClickTempo(kitIdx int, bpm float64) error {
-	// Scaled value: BPM * 10 (e.g., 120.0 BPM = 1200)
+	fmt.Printf("setting kit %d tempo to bpm %f\n", kitIdx, bpm)
 	scaledValue := uint16(bpm * 10.0)
 
-	addr := c.getKitParamAddress(kitIdx, KitCommon, OffsetTempo)
-	data := c.encodeNibbledUint16(scaledValue)
+	addr := kitParamAddress(kitIdx, KitCommon, OffsetKitCommonTempo)
+
+	data := []byte{
+		byte((scaledValue >> 12) & 0x0F),
+		byte((scaledValue >> 8) & 0x0F),
+		byte((scaledValue >> 4) & 0x0F),
+		byte(scaledValue & 0x0F),
+	}
 
 	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
 	return c.conn.sendSysEx(sysex)
@@ -734,12 +791,12 @@ func (c *linuxMidiClient) SetKitClickStartRangeTo(kitIdx int, to int) error {
 }
 
 // SetKitClickMode sets Click Mode for a kit (0 = PRESET, 1 = WAVE, 2 = CLICK-TRACK)
-func (c *linuxMidiClient) SetKitClickMode(kitNum int, mode int) error {
+func (c *linuxMidiClient) SetKitClickMode(kitIdx int, mode int) error {
 	if mode < 0 || mode > 2 {
 		return fmt.Errorf("click mode %d out of bounds (0..2)", mode)
 	}
 
-	addr := c.getKitParamAddress(kitNum, KitClick, OffsetClickMode)
+	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickMode)
 	data := []byte{byte(mode)}
 
 	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
@@ -864,12 +921,12 @@ func (c *linuxMidiClient) GetKitClickSound(kitIdx int) (int, error) {
 }
 
 // SetKitClickVolume sets Click Volume (-600 to +60, corresponding to -60.0 dB to +6.0 dB)
-func (c *linuxMidiClient) SetKitClickVolume(kitNum int, volume int) error {
+func (c *linuxMidiClient) SetKitClickVolume(kitIdx int, volume int) error {
 	if volume < -600 || volume > 60 {
 		return fmt.Errorf("click volume %d out of bounds (-600..60)", volume)
 	}
 
-	addr := c.getKitParamAddress(kitNum, KitClick, OffsetClickVolume)
+	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickVolume)
 	if volume < 0 {
 		volume = volume + 0x10000
 	}
