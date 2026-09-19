@@ -15,7 +15,7 @@ const (
 // Header: 0xF0, Non-Realtime ID: 0x7E, Target Device ID: 0x7F (All Call), General Info: 0x06, Identity Request: 0x01, EOX: 0xF7
 var sysExPing = []byte{0xF0, 0x7E, 0x7F, 0x06, 0x01, 0xF7}
 
-func encodeRQ1(deviceID byte, modelID []byte, addr [4]byte, size [4]byte) []byte {
+func encodeRQ1(deviceID byte, modelID []byte, addr []byte, size []byte) []byte {
 	msg := []byte{RolandHeaderByte, RolandVendorID, deviceID}
 	msg = append(msg, modelID...)
 	msg = append(msg, CmdRQ1)

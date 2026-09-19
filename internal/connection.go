@@ -162,7 +162,7 @@ func (c *Connection) Close() error {
 // modelID: slice of bytes defining the device model (e.g., []byte{0x00, 0x00, 0x00, 0x??})
 // address: 4-byte target memory address []byte
 // data: payload bytes to write
-func (c *Connection) encodeDT1(deviceID byte, modelID []byte, addr [4]byte, data []byte) []byte {
+func (c *Connection) encodeDT1(deviceID byte, modelID []byte, addr []byte, data []byte) []byte {
 	// FIXME handle data too large
 	msg := []byte{RolandHeaderByte, RolandVendorID, deviceID}
 	msg = append(msg, modelID...)

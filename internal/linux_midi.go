@@ -151,10 +151,10 @@ func (c *linuxMidiClient) SetActiveKit(kitIdx int) error {
 
 func (c *linuxMidiClient) GetActiveKit() (int, error) {
 	// Address: Current Kit Number (0x00, 0x00, 0x00, 0x00)
-	addr := [4]byte{0x00, 0x00, 0x00, 0x00}
+	addr := []byte{0x00, 0x00, 0x00, 0x00}
 
 	// MUST request 4 bytes to match the 4-nibble DT1 payload returned by SPD-SX PRO
-	size := [4]byte{0x00, 0x00, 0x00, 0x04}
+	size := []byte{0x00, 0x00, 0x00, 0x04}
 	rq1Query := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 
 	resp, err := c.conn.TransceiveSysEx(rq1Query)
@@ -214,7 +214,7 @@ func (c *linuxMidiClient) parseKitNameResponse(resp []byte) (string, string, err
 	return name, subTitle, nil
 }
 
-func (c *linuxMidiClient) getKitParamAddress(kitIdx int, subsectionOffset uint32, paramOffset uint32) [4]byte {
+func (c *linuxMidiClient) getKitParamAddress(kitIdx int, subsectionOffset uint32, paramOffset uint32) []byte {
 
 	// Base Byte 1 starts at 0x04. Carries over to 0x05 at Kit 65, 0x06 at Kit 129
 	b1 := byte(0x04 + (kitIdx / 64))
@@ -230,7 +230,7 @@ func (c *linuxMidiClient) getKitParamAddress(kitIdx int, subsectionOffset uint32
 	offB3 := byte((totalOffset >> 8) & 0x7F)
 	offB4 := byte(totalOffset & 0x7F)
 
-	return [4]byte{
+	return []byte{
 		b1,
 		b2 + offB2,
 		offB3,
@@ -241,7 +241,7 @@ func (c *linuxMidiClient) getKitParamAddress(kitIdx int, subsectionOffset uint32
 // getKitParamAddress calculates the 4-byte SysEx address for a given kit and parameter offset.
 // Kit 001 (kitIdx = 0)  -> Base Address 04 02 00 00
 // Kit 049 (kitIdx = 48) -> Base Address 04 62 00 00
-func (c *linuxMidiClient) getKitParamAddressTempo(kitIdx int, subsectionOffset uint32, paramOffset uint32) [4]byte {
+func (c *linuxMidiClient) getKitParamAddressTempo(kitIdx int, subsectionOffset uint32, paramOffset uint32) []byte {
 	totalOffset := subsectionOffset + paramOffset
 
 	// Extract 7-bit MIDI offsets
@@ -261,11 +261,11 @@ func (c *linuxMidiClient) getKitParamAddressTempo(kitIdx int, subsectionOffset u
 	b3 := offB3
 	b4 := offB4
 
-	return [4]byte{b1, b2, b3, b4}
+	return []byte{b1, b2, b3, b4}
 }
 
 /*
-func (c *linuxMidiClient) getKitParamAddress(kitIdx int, subsectionOffset uint32, paramOffset uint32) [4]byte {
+func (c *linuxMidiClient) getKitParamAddress(kitIdx int, subsectionOffset uint32, paramOffset uint32) []byte {
 
 	// Base Address 0x04 0x00 0x00 0x00 in 7-bit linear space:
 	kitBaseAddr := uint32(0x04) << 21
@@ -278,7 +278,7 @@ func (c *linuxMidiClient) getKitParamAddress(kitIdx int, subsectionOffset uint32
 	totalAddr := kitBaseAddr + (uint32(kitIdx) * kitStride) + subsectionOffset + paramOffset
 
 	// Convert 7-bit linear integer back into 4 discrete 7-bit bytes
-	return [4]byte{
+	return []byte{
 		byte((totalAddr >> 21) & 0x7F), // Byte 1 (Carries 0x04 -> 0x05 at Kit 65)
 		byte((totalAddr >> 14) & 0x7F), // Byte 2 (Increments 0x00, 0x02, ..., wraps at 0x7E)
 		byte((totalAddr >> 7) & 0x7F),  // Byte 3
@@ -290,7 +290,7 @@ func (c *linuxMidiClient) getKitParamAddress(kitIdx int, subsectionOffset uint32
 func (c *linuxMidiClient) GetKitList() ([]types.Kit, error) {
 	var kits []types.Kit
 	// Request 44 bytes total (12 bytes Name + 32 bytes SubTitle)
-	size := [4]byte{0x00, 0x00, 0x00, byte(KitBlockLength)}
+	size := []byte{0x00, 0x00, 0x00, byte(KitBlockLength)}
 
 	for i := 1; i <= TotalKits; i++ {
 		addr := c.getKitParamAddress(i, KitCommon, ParamOffsetKitName)
@@ -346,7 +346,7 @@ func (c *linuxMidiClient) GetSetlist(setlistNum int) (*types.Setlist, error) {
 
 	// 1. Query Setlist Name (12 bytes at sub-offset 0x00)
 	nameAddr := c.getSetlistAddress(setlistNum)
-	nameSize := [4]byte{0x00, 0x00, 0x00, 0x18}
+	nameSize := []byte{0x00, 0x00, 0x00, 0x18}
 	rq1Name := encodeRQ1(c.deviceID, ModelIDSPDSXPro, nameAddr, nameSize)
 
 	respName, err := c.conn.TransceiveSysEx(rq1Name)
@@ -361,7 +361,7 @@ func (c *linuxMidiClient) GetSetlist(setlistNum int) (*types.Setlist, error) {
 
 	// 2. Query Setlist Kit Steps (32 steps * 4 bytes = 128 bytes at sub-offset B4 = 0x10)
 	stepsAddr := c.getSetlistStepsAddress(setlistNum)
-	stepsSize := [4]byte{0x00, 0x00, 0x01, 0x00}
+	stepsSize := []byte{0x00, 0x00, 0x01, 0x00}
 	rq1Steps := encodeRQ1(c.deviceID, ModelIDSPDSXPro, stepsAddr, stepsSize)
 
 	respSteps, err := c.conn.TransceiveSysEx(rq1Steps)
@@ -464,13 +464,13 @@ func (c *linuxMidiClient) parseSetNameResponse(resp []byte) (string, error) {
 }
 
 // getSetlistAddress calculates the 4-byte Roland address for Setlist N (1..32)
-func (c *linuxMidiClient) getSetlistAddress(setlistNum int) [4]byte {
+func (c *linuxMidiClient) getSetlistAddress(setlistNum int) []byte {
 	idx := setlistNum - 1 // 0-based index (0..31)
 
 	b2 := byte(idx / 8)          // Bank 0..3: 0x00, 0x01, 0x02, 0x03
 	b3 := byte((idx % 8) * 0x10) // 0x00, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70
 
-	return [4]byte{
+	return []byte{
 		0x03, // Block 03
 		b2,
 		b3,
@@ -479,14 +479,14 @@ func (c *linuxMidiClient) getSetlistAddress(setlistNum int) [4]byte {
 }
 
 // getSetlistStepsAddress calculates the address for step data of Setlist N (1..32)
-func (c *linuxMidiClient) getSetlistStepsAddress(setlistNum int) [4]byte {
+func (c *linuxMidiClient) getSetlistStepsAddress(setlistNum int) []byte {
 	addr := c.getSetlistAddress(setlistNum)
 	addr[3] = 0x10 // Step offset is 0x10 relative to the setlist base address
 	return addr
 }
 
 // getPadLayerParamAddress constructs the 4-byte Roland address.
-func (c *linuxMidiClient) getPadLayerParamAddress(kitIdx int, padIdx int, layer types.PadLayer, subAddrB4 byte) [4]byte {
+func (c *linuxMidiClient) getPadLayerParamAddress(kitIdx int, padIdx int, layer types.PadLayer, subAddrB4 byte) []byte {
 	// Kit Base Offset (Bytes 1 & 2)
 	kitStride := kitIdx * 2
 	b1 := byte(0x04 + (kitStride / 128))
@@ -497,7 +497,7 @@ func (c *linuxMidiClient) getPadLayerParamAddress(kitIdx int, padIdx int, layer 
 	b3 := byte(layer) + byte(padIdx*2)
 	b4 := subAddrB4
 
-	return [4]byte{b1, b2, b3, b4}
+	return []byte{b1, b2, b3, b4}
 }
 
 // GetPadLayerVolume fetches volume for a specific layer on a pad.
@@ -505,7 +505,7 @@ func (c *linuxMidiClient) GetPadLayerVolume(kitIdx int, padIdx int, layer types.
 	// Sub-address 0x05 holds volume within the layer block
 	addr := c.getPadLayerParamAddress(kitIdx, padIdx, layer, 0x05)
 
-	size := [4]byte{0x00, 0x00, 0x00, 0x04}
+	size := []byte{0x00, 0x00, 0x00, 0x04}
 	rq1Query := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 
 	resp, err := c.conn.TransceiveSysEx(rq1Query)
@@ -636,7 +636,7 @@ func (c *linuxMidiClient) encodeNibbledUint16(val uint16) []byte {
 
 func (c *linuxMidiClient) GetKitClickTempo(kitIdx int) (float64, error) {
 	addr := kitParamAddress(kitIdx, KitCommon, OffsetKitCommonTempo)
-	size := [4]byte{0x00, 0x00, 0x00, 0x04}
+	size := []byte{0x00, 0x00, 0x00, 0x04}
 
 	sysex := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 	reply, err := c.conn.TransceiveSysEx(sysex)
@@ -705,7 +705,7 @@ func decodeNibbledInt16Signed(b []byte) int16 {
 func (c *linuxMidiClient) GetKitPadLinkSend(kitIdx int, padIdx int) (int, error) {
 	padOffset := uint32(0x00002000) + uint32(padIdx)*uint32(0x00000100)
 	addr := c.getKitParamAddress(kitIdx, padOffset, 0x0000000C)
-	size := [4]byte{0x00, 0x00, 0x00, 0x02}
+	size := []byte{0x00, 0x00, 0x00, 0x02}
 
 	sysex := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 	reply, err := c.conn.TransceiveSysEx(sysex)
@@ -724,7 +724,7 @@ func (c *linuxMidiClient) GetKitPadLinkSend(kitIdx int, padIdx int) (int, error)
 func (c *linuxMidiClient) GetKitPadLinkReceive(kitIdx int, padIdx int) (int, error) {
 	padOffset := uint32(0x00002000) + uint32(padIdx)*uint32(0x00000100)
 	addr := c.getKitParamAddress(kitIdx, padOffset, 0x0000000C)
-	size := [4]byte{0x00, 0x00, 0x00, 0x02}
+	size := []byte{0x00, 0x00, 0x00, 0x02}
 
 	sysex := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 	reply, err := c.conn.TransceiveSysEx(sysex)
@@ -806,7 +806,7 @@ func (c *linuxMidiClient) SetKitClickMode(kitIdx int, mode int) error {
 // GetKitClickMode retrieves the Click Mode for a kit
 func (c *linuxMidiClient) GetKitClickMode(kitIdx int) (int, error) {
 	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickMode)
-	size := [4]byte{0x00, 0x00, 0x00, 0x01}
+	size := []byte{0x00, 0x00, 0x00, 0x01}
 
 	sysex := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 	reply, err := c.conn.TransceiveSysEx(sysex)
@@ -824,7 +824,7 @@ func (c *linuxMidiClient) GetKitClickMode(kitIdx int) (int, error) {
 // GetKitClickVolume retrieves the Click Volume (-601 = -INF, -600..60 = -60.0dB..+6.0dB)
 func (c *linuxMidiClient) GetKitClickVolume(kidIdx int) (int, error) {
 	addr := c.getKitParamAddress(kidIdx, KitClick, OffsetClickVolume)
-	size := [4]byte{0x00, 0x00, 0x00, 0x04}
+	size := []byte{0x00, 0x00, 0x00, 0x04}
 
 	sysex := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 	reply, err := c.conn.TransceiveSysEx(sysex)
@@ -861,7 +861,7 @@ func (c *linuxMidiClient) SetKitClickPan(kitIdx int, pan int8) error {
 // GetKitClickPan retrieves the Click Pan position (-15..15)
 func (c *linuxMidiClient) GetKitClickPan(kitIdx int) (int8, error) {
 	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickPan)
-	size := [4]byte{0x00, 0x00, 0x00, 0x04}
+	size := []byte{0x00, 0x00, 0x00, 0x04}
 
 	sysex := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 	reply, err := c.conn.TransceiveSysEx(sysex)
@@ -905,7 +905,7 @@ func (c *linuxMidiClient) SetKitClickSound(kitIdx int, sound int) error {
 
 func (c *linuxMidiClient) GetKitClickSound(kitIdx int) (int, error) {
 	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickSound)
-	size := [4]byte{0x00, 0x00, 0x00, 0x01}
+	size := []byte{0x00, 0x00, 0x00, 0x01}
 
 	sysex := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
 	reply, err := c.conn.TransceiveSysEx(sysex)

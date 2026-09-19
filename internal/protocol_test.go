@@ -63,16 +63,16 @@ func TestEncodeRQ1(t *testing.T) {
 		name     string
 		deviceID byte
 		modelID  []byte
-		addr     [4]byte
-		size     [4]byte
+		addr     []byte
+		size     []byte
 		expected []byte
 	}{
 		{
 			name:     "Standard GS/GM Request (Single model byte)",
 			deviceID: 0x10,
 			modelID:  []byte{0x42}, // e.g., Roland GS Model ID
-			addr:     [4]byte{0x40, 0x00, 0x00, 0x00},
-			size:     [4]byte{0x00, 0x00, 0x00, 0x04},
+			addr:     []byte{0x40, 0x00, 0x00, 0x00},
+			size:     []byte{0x00, 0x00, 0x00, 0x04},
 			// Payload sum: 0x40 + 0x04 = 0x44 (68)
 			// Checksum: 128 - 68 = 60 (0x3C)
 			expected: []byte{
@@ -89,8 +89,8 @@ func TestEncodeRQ1(t *testing.T) {
 			name:     "Multi-byte Model ID (3-byte extension)",
 			deviceID: 0x00,
 			modelID:  []byte{0x00, 0x00, 0x64}, // e.g., modern Roland synth family
-			addr:     [4]byte{0x01, 0x00, 0x00, 0x00},
-			size:     [4]byte{0x00, 0x00, 0x02, 0x00},
+			addr:     []byte{0x01, 0x00, 0x00, 0x00},
+			size:     []byte{0x00, 0x00, 0x02, 0x00},
 			// Payload sum: 0x01 + 0x02 = 0x03 (3)
 			// Checksum: 128 - 3 = 125 (0x7D)
 			expected: []byte{
@@ -107,8 +107,8 @@ func TestEncodeRQ1(t *testing.T) {
 			name:     "Payload Sum Modulo 128 Zero Edge Case",
 			deviceID: 0x10,
 			modelID:  []byte{0x42},
-			addr:     [4]byte{0x40, 0x00, 0x00, 0x00},
-			size:     [4]byte{0x40, 0x00, 0x00, 0x00},
+			addr:     []byte{0x40, 0x00, 0x00, 0x00},
+			size:     []byte{0x40, 0x00, 0x00, 0x00},
 			// Payload sum: 0x40 + 0x40 = 0x80 (128)
 			// Checksum: 128 - (128 % 128) = 128 -> 128 & 0x7F = 0x00
 			expected: []byte{
@@ -125,8 +125,8 @@ func TestEncodeRQ1(t *testing.T) {
 			name:     "Empty Model ID",
 			deviceID: 0x7F, // Broadcast ID
 			modelID:  []byte{},
-			addr:     [4]byte{0x00, 0x00, 0x00, 0x00},
-			size:     [4]byte{0x00, 0x00, 0x00, 0x00},
+			addr:     []byte{0x00, 0x00, 0x00, 0x00},
+			size:     []byte{0x00, 0x00, 0x00, 0x00},
 			// Payload sum: 0
 			// Checksum: 128 - 0 = 128 -> 0x00
 			expected: []byte{

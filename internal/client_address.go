@@ -5,15 +5,15 @@ const SectionKitCommon uint32 = 0x00000000
 const OffsetKitCommonVolume uint16 = 0x50
 const OffsetKitCommonTempo uint16 = 0x56
 
-func kitBaseAddress(kitIdx int) [4]byte {
+func kitBaseAddress(kitIdx int) []byte {
 	rawByte2 := kitIdx * 2
 	b1 := byte(0x04 + (rawByte2 / 128))
 	b2 := byte(rawByte2 % 128)
 
-	return [4]byte{b1, b2, 0x00, 0x00}
+	return []byte{b1, b2, 0x00, 0x00}
 }
 
-func kitParamAddress(kitIdx int, subsection uint32, offset uint16) [4]byte {
+func kitParamAddress(kitIdx int, subsection uint32, offset uint16) []byte {
 	// Start with base address [b1, b2, 0, 0]
 	base := kitBaseAddress(kitIdx)
 
@@ -31,7 +31,7 @@ func kitParamAddress(kitIdx int, subsection uint32, offset uint16) [4]byte {
 	b2 := uint32(base[1]) + off2 + (b3 / 128)
 	b1 := uint32(base[0]) + off1 + (b2 / 128)
 
-	return [4]byte{
+	return []byte{
 		byte(b1 & 0x7F),
 		byte(b2 & 0x7F),
 		byte(b3 & 0x7F),
