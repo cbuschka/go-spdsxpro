@@ -135,6 +135,19 @@ func run(configFile string) error {
 		return err
 	}
 
+	for _, setlist := range config.Setlists {
+		setlistIdx := setlist.Slot
+		err = client.SetSetlistName(*setlistIdx, setlist.Name)
+		if err != nil {
+			return err
+		}
+		log.Infof("Setlist %d name set to %s", setlistIdx, setlist.Name)
+
+		for stepIdx, step := range setlist.Steps {
+			fmt.Printf("setting step %d of %d not implemented: %v\n", setlistIdx, stepIdx, step)
+		}
+	}
+
 	/*
 		err = dumpActiveKit(client)
 		if err != nil {

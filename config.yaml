@@ -286,3 +286,9 @@ kits:
     padLinks:
       - { padIndex: 0, tx: 1, rx: 0 }
       - { padIndex: 1, tx: 0, rx: 1 }
+setlists:
+  - name: Heimspiel 2026
+    slot: 32
+    steps:
+      - kit: Unsere Zeit
+      - kit: Hey Junge

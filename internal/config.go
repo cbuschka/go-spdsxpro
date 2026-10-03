@@ -7,7 +7,18 @@ import (
 )
 
 type Config struct {
-	Kits []YamlKit `json:"kits" yaml:"kits"`
+	Kits     []YamlKit     `json:"kits" yaml:"kits"`
+	Setlists []YamlSetlist `json:"setlists" yaml:"setlists"`
+}
+
+type YamlSetlist struct {
+	Slot  *int              `json:"slot" yaml:"slot"`
+	Name  string            `json:"name" yaml:"name"`
+	Steps []YamlSetlistStep `json:"steps" yaml:"steps"`
+}
+
+type YamlSetlistStep struct {
+	Kit string `json:"kit" yaml:"kit"`
 }
 
 type YamlKit struct {
@@ -50,4 +61,53 @@ func ReadConfig(in io.Reader) (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+func (c *Config) Validate() error {
+	for i, kit := range c.Kits {
+		if kit.Slot != nil && (*kit.Slot < 1 || *kit.Slot > 100) {
+			return &ConfigError{Field: fmtPath("kits", i, "slot"), Message: "slot must be between 1 and 100"}
+		}
+		if kit.Name == "" {
+			return &ConfigError{Field: fmtPath("kits", i, "name"), Message: "kit name cannot be empty"}
+		}
+	}
+
+	for i, setlist := range c.Setlists {
+		if setlist.Name == "" {
+			return &ConfigError{Field: fmtPath("setlists", i, "name"), Message: "setlist name cannot be empty"}
+		}
+
+		for stepIdx, step := range setlist.Steps {
+			_, found := c.GetKitByName(step.Kit)
+			if !found {
+				return &ConfigError{Field: fmtPath("setlists", i, fmtPath("steps", stepIdx, "kit")), Message: "setlist name cannot be empty"}
+			}
+		}
+	}
+
+	return nil
+}
+
+type ConfigError struct {
+	Field   string
+	Message string
+}
+
+func (e *ConfigError) Error() string {
+	return e.Field + ": " + e.Message
+}
+
+func fmtPath(section string, index int, field string) string {
+	return string([]byte(section)) + "[" + string(rune('0'+index)) + "]." + field
+}
+
+func (c *Config) GetKitByName(name string) (*YamlKit, bool) {
+	for _, kit := range c.Kits {
+		if kit.Name == name {
+			return &kit, true
+		}
+	}
+
+	return nil, false
 }
