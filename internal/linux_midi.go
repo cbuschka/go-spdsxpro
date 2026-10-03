@@ -990,16 +990,28 @@ func (c *linuxMidiClient) GetSetlistName(setlistIdx int) (string, error) {
 func (c *linuxMidiClient) getSetlistStepAddress(setlistIdx int, stepIdx int) []byte {
 	baseAddr := c.getSetlistAddress(setlistIdx)
 
-	// 2. Calculate the offset for the requested step (Step 1 starts at 0x20, each step is 4 bytes)
-	// stepNum is assumed to be 1-indexed (1, 2, 3...)
-	offset := 0x20 + stepIdx*4
+	// Step 1 starts at offset 0x20, each step takes 4 bytes.
+	// Accumulate total offset relative to baseAddr[3].
+	totalOffset := int(baseAddr[3]) + 0x20 + (stepIdx * 4)
 
-	// 3. Apply the offset to the 4th byte (baseAddr[3])
-	// Note: If steps span across multiple chunks past 0x7F, handle carry to b3/b2 if necessary,
-	// but standard setlist step blocks stay within the 0x20-0xFF range of that memory slot.
-	baseAddr[3] = byte(offset)
+	// Roland SysEx addresses are 7-bit per byte (0x00 to 0x7F).
+	// Handle 7-bit carry propagation across address bytes (baseAddr[3] -> baseAddr[2] -> baseAddr[1]).
+	b3 := totalOffset & 0x7F
+	carry := totalOffset >> 7
 
-	return baseAddr
+	b2 := int(baseAddr[2]) + carry
+	b1Carry := b2 >> 7
+	b2 = b2 & 0x7F
+
+	b1 := int(baseAddr[1]) + b1Carry
+	b1 = b1 & 0x7F
+
+	return []byte{
+		baseAddr[0],
+		byte(b1),
+		byte(b2),
+		byte(b3),
+	}
 }
 
 func (c *linuxMidiClient) SetSetlistStepKit(setlistIdx int, stepIdx int, kitIdx int) error {
