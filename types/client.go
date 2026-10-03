@@ -30,20 +30,24 @@ type Client interface {
 	SetKitClickSound(kitIdx int, mode int) error
 	GetKitClickVolume(kitIdx int) (int, error)
 	SetKitClickVolume(kitIdx int, volume int) error
+	GetSetlist(setlistIdx int) (*Setlist, error)
+	GetSetlistName(setlistIdx int) (string, error)
+	SetSetlistName(setlistIdx int, name string) error
 }
 type Kit struct {
-	Number   int
+	Slot     int
+	Index    int // zero based
 	Name     string
 	SubTitle string
 }
 
 type SetlistStep struct {
-	StepNumber int
-	KitNumber  int // 1-indexed Kit ID (1..200)
+	StepIndex int
+	KitIndex  int // 1-indexed Kit ID (0..199)
 }
 
 type Setlist struct {
-	ID    int           // Setlist 1..32
+	Index int           // Setlist 1..32
 	Name  string        // 12-char Name
 	Steps []SetlistStep // Array of kit entries assigned to this setlist
 }

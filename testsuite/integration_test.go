@@ -3,6 +3,7 @@ package testsuite
 import (
 	"fmt"
 	"go-spdsxpro"
+	"go-spdsxpro/internal"
 	"go-spdsxpro/types"
 	"go-spdsxpro/types/clientopts"
 	"testing"
@@ -34,15 +35,11 @@ func TestActiveKit(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	client, err := spdsxpro.NewClient("/dev/snd/midiC1D0", clientopts.WithDebug(true))
+	client, err := openClient(t)
 	if err != nil {
 		t.Fatalf("Failed to connect to SPD-SX PRO: %v", err)
 	}
 	defer client.Close()
-
-	if err := client.Ping(); err != nil {
-		t.Fatalf("Device ping failed: %v", err)
-	}
 
 	err = client.SetActiveKit(50)
 	require.NoError(t, err)
@@ -53,15 +50,11 @@ func TestKits49To67_AllPropertiesSetAndGet(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	client, err := spdsxpro.NewClient("/dev/snd/midiC1D0", clientopts.WithDebug(true))
+	client, err := openClient(t)
 	if err != nil {
 		t.Fatalf("Failed to connect to SPD-SX PRO: %v", err)
 	}
 	defer client.Close()
-
-	if err := client.Ping(); err != nil {
-		t.Fatalf("Device ping failed: %v", err)
-	}
 
 	var tests []KitPropertyTestCase
 
@@ -184,4 +177,80 @@ func TestKits49To67_AllPropertiesSetAndGet(t *testing.T) {
 		}
 
 	*/
+}
+
+func TestGetSetlistList(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	client, err := openClient(t)
+	if err != nil {
+		t.Fatalf("Failed to connect to SPD-SX PRO: %v", err)
+	}
+	defer client.Close()
+
+	setlistList, err := client.GetSetlistList()
+	require.NoError(t, err)
+
+	require.NotEmpty(t, setlistList)
+	for _, setlist := range setlistList {
+		fmt.Printf("%d %s\n", setlist.Index, setlist.Name)
+		for _, step := range setlist.Steps {
+			fmt.Printf("\t%d %d\n", step.StepIndex, step.KitIndex)
+		}
+	}
+}
+
+func TestGetSetlist(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	client, err := openClient(t)
+	if err != nil {
+		t.Fatalf("Failed to connect to SPD-SX PRO: %v", err)
+	}
+	defer client.Close()
+
+	setlist, err := client.GetSetlist(0)
+	require.NoError(t, err)
+
+	fmt.Printf("%d %s\n", setlist.Index, setlist.Name)
+	for _, step := range setlist.Steps {
+		fmt.Printf("\t%d %d\n", step.StepIndex, step.KitIndex)
+	}
+}
+
+func openClient(_ *testing.T) (types.Client, error) {
+	client, err := spdsxpro.NewClient("/dev/snd/midiC1D0", clientopts.WithDebug(true))
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to SPD-SX PRO: %v", err)
+	}
+
+	if err := client.Ping(); err != nil {
+		return nil, fmt.Errorf("device ping failed: %v", err)
+	}
+	return client, nil
+}
+
+func TestGetSetSetlistName(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	client, err := openClient(t)
+	if err != nil {
+		t.Fatalf("Failed to connect to SPD-SX PRO: %v", err)
+	}
+	defer client.Close()
+
+	name := fmt.Sprintf("SETLIST %d", internal.TotalSetlists)
+	err = client.SetSetlistName(internal.TotalSetlists-1, name)
+	require.NoError(t, err)
+
+	setlistName, err := client.GetSetlistName(internal.TotalSetlists - 1)
+	require.NoError(t, err)
+	require.Equal(t, name, setlistName)
+	fmt.Printf("%s", setlistName)
 }

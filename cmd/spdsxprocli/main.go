@@ -269,7 +269,7 @@ func dumpSetList(client types.Client) error {
 	for idx, set := range sets {
 		fmt.Printf("setlist %d: %s\n", idx+1, set.Name)
 		for _, step := range set.Steps {
-			fmt.Printf("    step %d: %d\n", step.StepNumber, step.KitNumber)
+			fmt.Printf("    step %d: %d\n", step.StepIndex, step.KitIndex)
 		}
 	}
 

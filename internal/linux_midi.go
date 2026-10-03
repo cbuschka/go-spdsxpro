@@ -27,7 +27,7 @@ const (
 	rolandVendorID = 0x41
 
 	TotalSetlists     = 32 // SPD-SX PRO supports up to 32 Setlists
-	SetlistNameLength = 12 // Setlist Name is 12 ASCII bytes
+	SetlistNameLength = 16 // Setlist Name is 12 ASCII bytes
 	SetlistMaxSteps   = 32 // Up to 32 kit steps per setlist
 
 	ParamOffsetKitName     = uint32(0x00000000)
@@ -311,7 +311,8 @@ func (c *linuxMidiClient) GetKitList() ([]types.Kit, error) {
 		}
 
 		kits = append(kits, types.Kit{
-			Number:   i,
+			Slot:     i,
+			Index:    i - 1,
 			Name:     name,
 			SubTitle: subTitle,
 		})
@@ -339,43 +340,43 @@ func (c *linuxMidiClient) GetSetlistList() ([]types.Setlist, error) {
 	return setlists, nil
 }
 
-func (c *linuxMidiClient) GetSetlist(setlistNum int) (*types.Setlist, error) {
-	if setlistNum < 1 || setlistNum > TotalSetlists {
+func (c *linuxMidiClient) GetSetlist(setlistIdx int) (*types.Setlist, error) {
+	if setlistIdx < 0 || setlistIdx > TotalSetlists-1 {
 		return nil, fmt.Errorf("setlist ID out of bounds (1..%d)", TotalSetlists)
 	}
 
 	// 1. Query Setlist Name (12 bytes at sub-offset 0x00)
-	nameAddr := c.getSetlistAddress(setlistNum)
+	nameAddr := c.getSetlistAddress(setlistIdx)
 	nameSize := []byte{0x00, 0x00, 0x00, 0x18}
 	rq1Name := encodeRQ1(c.deviceID, ModelIDSPDSXPro, nameAddr, nameSize)
 
 	respName, err := c.conn.TransceiveSysEx(rq1Name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query setlist %d name: %w", setlistNum, err)
+		return nil, fmt.Errorf("failed to query setlist %d name: %w", setlistIdx, err)
 	}
 
 	name, err := c.parseSetNameResponse(respName)
 	if err != nil {
-		return nil, fmt.Errorf("parsing setlist %d name failed: %w", setlistNum, err)
+		return nil, fmt.Errorf("parsing setlist %d name failed: %w", setlistIdx, err)
 	}
 
 	// 2. Query Setlist Kit Steps (32 steps * 4 bytes = 128 bytes at sub-offset B4 = 0x10)
-	stepsAddr := c.getSetlistStepsAddress(setlistNum)
+	stepsAddr := c.getSetlistStepsAddress(setlistIdx)
 	stepsSize := []byte{0x00, 0x00, 0x01, 0x00}
 	rq1Steps := encodeRQ1(c.deviceID, ModelIDSPDSXPro, stepsAddr, stepsSize)
 
 	respSteps, err := c.conn.TransceiveSysEx(rq1Steps)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query setlist %d steps: %w", setlistNum, err)
+		return nil, fmt.Errorf("failed to query setlist %d steps: %w", setlistIdx, err)
 	}
 
 	steps, err := c.parseSetlistSteps(respSteps)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse setlist %d steps: %w", setlistNum, err)
+		return nil, fmt.Errorf("failed to parse setlist %d steps: %w", setlistIdx, err)
 	}
 
 	return &types.Setlist{
-		ID:    setlistNum,
+		Index: setlistIdx,
 		Name:  name,
 		Steps: steps,
 	}, nil
@@ -413,8 +414,8 @@ func (c *linuxMidiClient) parseSetlistSteps(resp []byte) ([]types.SetlistStep, e
 
 		if kitID > 0 && kitID <= TotalKits {
 			steps = append(steps, types.SetlistStep{
-				StepNumber: hardwareStepNum,
-				KitNumber:  kitID,
+				StepIndex: hardwareStepNum,
+				KitIndex:  kitID - 1,
 			})
 		}
 	}
@@ -464,11 +465,10 @@ func (c *linuxMidiClient) parseSetNameResponse(resp []byte) (string, error) {
 }
 
 // getSetlistAddress calculates the 4-byte Roland address for Setlist N (1..32)
-func (c *linuxMidiClient) getSetlistAddress(setlistNum int) []byte {
-	idx := setlistNum - 1 // 0-based index (0..31)
+func (c *linuxMidiClient) getSetlistAddress(setlistIdx int) []byte {
 
-	b2 := byte(idx / 8)          // Bank 0..3: 0x00, 0x01, 0x02, 0x03
-	b3 := byte((idx % 8) * 0x10) // 0x00, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70
+	b2 := byte(setlistIdx / 8)          // Bank 0..3: 0x00, 0x01, 0x02, 0x03
+	b3 := byte((setlistIdx % 8) * 0x10) // 0x00, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70
 
 	return []byte{
 		0x03, // Block 03
@@ -479,8 +479,8 @@ func (c *linuxMidiClient) getSetlistAddress(setlistNum int) []byte {
 }
 
 // getSetlistStepsAddress calculates the address for step data of Setlist N (1..32)
-func (c *linuxMidiClient) getSetlistStepsAddress(setlistNum int) []byte {
-	addr := c.getSetlistAddress(setlistNum)
+func (c *linuxMidiClient) getSetlistStepsAddress(setlistIdx int) []byte {
+	addr := c.getSetlistAddress(setlistIdx)
 	addr[3] = 0x10 // Step offset is 0x10 relative to the setlist base address
 	return addr
 }
@@ -941,4 +941,47 @@ func (c *linuxMidiClient) SetKitClickVolume(kitIdx int, volume int) error {
 
 	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
 	return c.conn.sendSysEx(sysex)
+}
+
+func (c *linuxMidiClient) SetSetlistName(setlistIdx int, name string) error {
+	if setlistIdx < 0 || setlistIdx > TotalSetlists-1 {
+		return fmt.Errorf("setlist ID out of bounds (1..%d)", TotalSetlists)
+	}
+
+	addr := c.getSetlistAddress(setlistIdx)
+
+	name = keepASCIIOnly(name)
+
+	var nameBytes []byte
+	for i := 0; i < SetlistNameLength; i++ {
+		char := byte(' ')
+		if i < len(name) {
+			char = name[i]
+		}
+		highNibble := (char >> 4) & 0x0F
+		lowNibble := char & 0x0F
+		// Roland SPD-SX Pro encodes characters as (High Nibble, Low Nibble)
+		nameBytes = append(nameBytes, highNibble, lowNibble)
+	}
+	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, nameBytes)
+	return c.conn.sendSysEx(sysex)
+}
+
+func (c *linuxMidiClient) GetSetlistName(setlistIdx int) (string, error) {
+	if setlistIdx < 0 || setlistIdx > TotalSetlists-1 {
+		return "", fmt.Errorf("setlist ID out of bounds (1..%d)", TotalSetlists)
+	}
+
+	nameAddr := c.getSetlistAddress(setlistIdx)
+	nameSize := []byte{0x00, 0x00, 0x00, 0x18}
+	rq1Name := encodeRQ1(c.deviceID, ModelIDSPDSXPro, nameAddr, nameSize)
+
+	resp, err := c.conn.TransceiveSysEx(rq1Name)
+	if err != nil {
+		return "", fmt.Errorf("failed to query setlist %d name: %w", setlistIdx, err)
+	}
+
+	name, err := c.parseSetNameResponse(resp)
+
+	return name, err
 }
