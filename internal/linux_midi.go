@@ -985,3 +985,45 @@ func (c *linuxMidiClient) GetSetlistName(setlistIdx int) (string, error) {
 
 	return name, err
 }
+
+// getSetlistStepAddress calculates the 4-byte Roland address for a given Setlist (1..32) and Step (1..N).
+func (c *linuxMidiClient) getSetlistStepAddress(setlistIdx int, stepIdx int) []byte {
+	baseAddr := c.getSetlistAddress(setlistIdx)
+
+	// 2. Calculate the offset for the requested step (Step 1 starts at 0x20, each step is 4 bytes)
+	// stepNum is assumed to be 1-indexed (1, 2, 3...)
+	offset := 0x20 + stepIdx*4
+
+	// 3. Apply the offset to the 4th byte (baseAddr[3])
+	// Note: If steps span across multiple chunks past 0x7F, handle carry to b3/b2 if necessary,
+	// but standard setlist step blocks stay within the 0x20-0xFF range of that memory slot.
+	baseAddr[3] = byte(offset)
+
+	return baseAddr
+}
+
+func (c *linuxMidiClient) SetSetlistStepKit(setlistIdx int, stepIdx int, kitIdx int) error {
+	if setlistIdx < 0 || setlistIdx > TotalSetlists-1 {
+		return fmt.Errorf("setlist ID out of bounds")
+	}
+	if kitIdx < -1 || kitIdx > 199 {
+		return fmt.Errorf("kit index out of bounds (-1..199)")
+	}
+
+	stepAddr := c.getSetlistStepAddress(setlistIdx, stepIdx)
+	payloadData := []byte{
+		byte((kitIdx >> 12) & 0x0F),
+		byte((kitIdx >> 8) & 0x0F),
+		byte((kitIdx >> 4) & 0x0F),
+		byte(kitIdx & 0x0F),
+	}
+
+	dt1Msg := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, stepAddr, payloadData)
+
+	err := c.conn.sendSysEx(dt1Msg)
+	if err != nil {
+		return fmt.Errorf("failed to set setlist %d step %d kit %d: %w", setlistIdx, stepIdx, kitIdx, err)
+	}
+
+	return nil
+}

@@ -33,6 +33,7 @@ type Client interface {
 	GetSetlist(setlistIdx int) (*Setlist, error)
 	GetSetlistName(setlistIdx int) (string, error)
 	SetSetlistName(setlistIdx int, name string) error
+	SetSetlistStepKit(setlistIdx int, stepIdx int, kitIdx int) error
 }
 type Kit struct {
 	Slot     int

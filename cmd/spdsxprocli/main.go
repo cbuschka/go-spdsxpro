@@ -143,8 +143,21 @@ func run(configFile string) error {
 		}
 		log.Infof("Setlist %d name set to %s", setlistIdx, setlist.Name)
 
-		for stepIdx, step := range setlist.Steps {
-			fmt.Printf("setting step %d of %d not implemented: %v\n", setlistIdx, stepIdx, step)
+		for stepIdx := 0; stepIdx < internal.SetlistMaxSteps; stepIdx++ {
+			if stepIdx < len(setlist.Steps) {
+				step := setlist.Steps[stepIdx]
+				referencedKit, found := config.GetKitByName(step.Kit)
+				if !found {
+					return fmt.Errorf("kit %s not found", step.Kit)
+				}
+				err = client.SetSetlistStepKit(*setlistIdx, stepIdx, *referencedKit.Slot-1)
+
+				fmt.Printf("set steplist %d step %d to kit %d: %v\n", setlistIdx, stepIdx, *referencedKit.Slot-1, step)
+			} else {
+				err = client.SetSetlistStepKit(*setlistIdx, stepIdx, -1)
+				fmt.Printf("cleared steplist %d step %d to -1\n", setlistIdx, stepIdx)
+			}
+
 		}
 	}
 

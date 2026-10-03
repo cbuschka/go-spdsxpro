@@ -288,7 +288,8 @@ kits:
       - { padIndex: 1, tx: 0, rx: 1 }
 setlists:
   - name: Heimspiel 2026
-    slot: 32
+    slot: 31
     steps:
       - kit: Unsere Zeit
       - kit: Hey Junge
+      - kit: Stille Helden
