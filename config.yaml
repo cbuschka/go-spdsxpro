@@ -16,7 +16,7 @@ kits:
           loop: off
           triggerType: oneshot
           poly: true
-          wave: trumpet
+          wave: boom
   - name: Unsere Zeit
     subtitle: Intro + Unsere Zeit
     slot: 50
@@ -37,6 +37,20 @@ kits:
           poly: false
           wave: DA Intro
         linkReceive: 1
+      - padIndex: 7
+        dynamics: off
+        layerA:
+          loop: off
+          triggerType: oneshot
+          poly: true
+          wave: war-sound
+      - padIndex: 8
+        dynamics: off
+        layerA:
+          loop: off
+          triggerType: oneshot
+          poly: true
+          wave: boom
   - name: Stille Helden
     slot: 51
     click:
@@ -357,5 +371,9 @@ waves:
     slot: 1559
   - name: trumpet
     slot: 1560
-  - name: war-sound
+  - name: war-sound-old
     slot: 1561
+  - name: boom
+    slot: 1562
+  - name: war-sound
+    slot: 1563
