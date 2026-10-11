@@ -16,6 +16,11 @@ type Client interface {
 	GetSetlistList() ([]Setlist, error)
 	GetPadLayerVolume(kitIdx int, padIdx int, layer PadLayer) (int, error)
 	SetPadLayerVolume(kitIdx int, padIdx int, layer PadLayer, value int) error
+	SetKitPadLayerLoop(kitIdx int, padIdx int, layer PadLayer, loopMode string) error
+	SetKitPadLayerWave(kitIdx int, padIdx int, layer PadLayer, waveSlot int) error
+	GetKitPadLayerWave(kitIdx int, padIdx int, layer PadLayer) (int, error)
+	SetKitPadLayerPoly(kitIdx int, padIdx int, layer PadLayer, poly bool) error
+	SetKitPadLayerTriggerType(kitIdx int, padIdx int, layer PadLayer, triggerType string) error
 	SetKitName(kitIdx int, name string) error
 	SetKitSubTitle(kitIdx int, name string) error
 	SetKitClickTempo(kidIdx int, tempoBpm float64) error
@@ -34,6 +39,7 @@ type Client interface {
 	GetSetlistName(setlistIdx int) (string, error)
 	SetSetlistName(setlistIdx int, name string) error
 	SetSetlistStepKit(setlistIdx int, stepIdx int, kitIdx int) error
+	SetKitPadDynamics(kitIdx int, padIdx int, on bool) error
 }
 type Kit struct {
 	Slot     int

@@ -500,6 +500,84 @@ func (c *linuxMidiClient) getPadLayerParamAddress(kitIdx int, padIdx int, layer 
 	return []byte{b1, b2, b3, b4}
 }
 
+func (c *linuxMidiClient) SetKitPadLayerPoly(kitIdx int, padIdx int, layer types.PadLayer, poly bool) error {
+	addr := c.getPadLayerParamAddress(kitIdx, padIdx, layer, 0x16)
+
+	polyVal := 0
+	if poly {
+		polyVal = 1
+	}
+	data := []byte{byte(polyVal)}
+
+	dt1Msg := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
+
+	return c.conn.sendSysEx(dt1Msg)
+}
+
+var loopMapping = stringMapping(map[string]int{
+	"":    0,
+	"off": 0,
+	"on":  1,
+	"x2":  2,
+	"x4":  3,
+	"x8":  4,
+})
+
+func (c *linuxMidiClient) SetKitPadLayerLoop(kitIdx int, padIdx int, layer types.PadLayer, loopMode string) error {
+	loop, err := loopMapping.toInt(loopMode)
+	if err != nil {
+		return err
+	}
+
+	addr := c.getPadLayerParamAddress(kitIdx, padIdx, layer, 0x19)
+
+	data := []byte{byte(loop)}
+
+	dt1Msg := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
+
+	return c.conn.sendSysEx(dt1Msg)
+}
+
+func (c *linuxMidiClient) SetKitPadLayerWave(kitIdx int, padIdx int, layer types.PadLayer, waveSlot int) error {
+	// Sub-address 0x05 holds volume within the layer block
+	addr := c.getPadLayerParamAddress(kitIdx, padIdx, layer, 0x01)
+
+	data := c.encodeNibbledUint16(uint16(waveSlot))
+
+	dt1Msg := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
+
+	return c.conn.sendSysEx(dt1Msg)
+}
+
+func (c *linuxMidiClient) GetKitPadLayerWave(kitIdx int, padIdx int, layer types.PadLayer) (int, error) {
+	// Sub-address 0x05 holds volume within the layer block
+	addr := c.getPadLayerParamAddress(kitIdx, padIdx, layer, 0x01)
+
+	size := []byte{0x00, 0x00, 0x00, 0x04}
+	rq1Query := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+
+	resp, err := c.conn.TransceiveSysEx(rq1Query)
+	if err != nil {
+		return -1, fmt.Errorf("failed to query pad wave: %w", err)
+	}
+
+	cmdIdx := 3 + len(ModelIDSPDSXPro)
+	addrIdx := cmdIdx + 1
+	dataStart := addrIdx + 4
+	checksumIdx := len(resp) - 2
+
+	dataBytes := resp[dataStart:checksumIdx]
+	if len(dataBytes) < 4 {
+		return -1, fmt.Errorf("expected 4 data bytes, got %d", len(dataBytes))
+	}
+
+	rawVal := (int(dataBytes[0]&0x0F) << 12) |
+		(int(dataBytes[1]&0x0F) << 8) |
+		(int(dataBytes[2]&0x0F) << 4) |
+		int(dataBytes[3]&0x0F)
+	return rawVal, nil
+}
+
 // GetPadLayerVolume fetches volume for a specific layer on a pad.
 func (c *linuxMidiClient) GetPadLayerVolume(kitIdx int, padIdx int, layer types.PadLayer) (int, error) {
 	// Sub-address 0x05 holds volume within the layer block
@@ -629,6 +707,13 @@ func (c *linuxMidiClient) encodeNibbledUint16(val uint16) []byte {
 	return []byte{
 		byte((val >> 12) & 0x0F),
 		byte((val >> 8) & 0x0F),
+		byte((val >> 4) & 0x0F),
+		byte(val & 0x0F),
+	}
+}
+
+func (c *linuxMidiClient) encodeNibbledUint8(val uint8) []byte {
+	return []byte{
 		byte((val >> 4) & 0x0F),
 		byte(val & 0x0F),
 	}
@@ -1038,4 +1123,42 @@ func (c *linuxMidiClient) SetSetlistStepKit(setlistIdx int, stepIdx int, kitIdx 
 	}
 
 	return nil
+}
+
+func (c *linuxMidiClient) getPadParamAddress(kitIdx int, padIdx int, off int) []byte {
+	padOffset := uint32(0x00002000) + uint32(padIdx)*uint32(0x00000100)
+	addr := c.getKitParamAddress(kitIdx, padOffset, uint32(off))
+	return addr
+}
+
+func (c *linuxMidiClient) SetKitPadDynamics(kitIdx int, padIdx int, on bool) error {
+	addr := c.getPadParamAddress(kitIdx, padIdx, 0x03)
+	data := []byte{byte(0)}
+	if on {
+		data[0] = 1
+	}
+
+	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
+	return c.conn.sendSysEx(sysex)
+}
+
+var triggerTypeMapping = stringMapping(map[string]int{
+	"":          0,
+	"oneshot":   0,
+	"alternate": 1,
+})
+
+func (c *linuxMidiClient) SetKitPadLayerTriggerType(kitIdx int, padIdx int, layer types.PadLayer, triggerTypeMode string) error {
+	triggerType, err := triggerTypeMapping.toInt(triggerTypeMode)
+	if err != nil {
+		return err
+	}
+
+	addr := c.getPadLayerParamAddress(kitIdx, padIdx, layer, 0x1a)
+
+	data := []byte{byte(triggerType)}
+
+	dt1Msg := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
+
+	return c.conn.sendSysEx(dt1Msg)
 }

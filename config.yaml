@@ -1,4 +1,22 @@
 kits:
+  - name: Sounds
+    subtitle: Sound
+    slot: 49
+    pads:
+      - padIndex: 7
+        dynamics: off
+        layerA:
+          loop: off
+          triggerType: oneshot
+          poly: true
+          wave: war-sound
+      - padIndex: 8
+        dynamics: off
+        layerA:
+          loop: off
+          triggerType: oneshot
+          poly: true
+          wave: trumpet
   - name: Unsere Zeit
     subtitle: Intro + Unsere Zeit
     slot: 50
@@ -8,9 +26,17 @@ kits:
       volume: 0
       tempo: 160
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+        linkSend: 1
+      - padIndex: 1
+        dynamics: off
+        layerA:
+          loop: off
+          triggerType: alternate
+          poly: false
+          wave: DA Intro
+        linkReceive: 1
   - name: Stille Helden
     slot: 51
     click:
@@ -19,9 +45,9 @@ kits:
       volume: 0
       tempo: 182
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Hey Junge
     slot: 52
     click:
@@ -30,9 +56,9 @@ kits:
       volume: 0
       tempo: 170
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Hallo Spacko
     slot: 53
     click:
@@ -41,9 +67,9 @@ kits:
       volume: 0
       tempo: 140
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Droge
     slot: 54
     click:
@@ -63,9 +89,9 @@ kits:
       volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Kat.S.8
     slot: 56
     click:
@@ -74,9 +100,9 @@ kits:
       volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Das System
     slot: 57
     click:
@@ -85,9 +111,9 @@ kits:
       volume: 0
       tempo: 140
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Nein
     slot: 58
     click:
@@ -96,9 +122,9 @@ kits:
       volume: 0
       tempo: 150
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Diese Welt
     slot: 59
     click:
@@ -118,9 +144,9 @@ kits:
       volume: 0
       tempo: 140
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Schlag Dich selbst
     slot: 61
     click:
@@ -129,9 +155,9 @@ kits:
       volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Wahre Freunde
     slot: 62
     click:
@@ -140,9 +166,9 @@ kits:
       volume: 0
       tempo: 160
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Jeder gg jeden
     slot: 63
     click:
@@ -151,9 +177,9 @@ kits:
       volume: 0
       tempo: 145
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Getrennte Wege
     slot: 64
     click:
@@ -162,9 +188,9 @@ kits:
       volume: 0
       tempo: 95
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Klaus
     slot: 65
     click:
@@ -173,9 +199,9 @@ kits:
       volume: 0
       tempo: 100
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Kenneth's Song
     slot: 66
     click:
@@ -184,9 +210,9 @@ kits:
       volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Facebook
     slot: 67
     click:
@@ -195,9 +221,9 @@ kits:
       volume: 0
       tempo: 140
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Morgen
     slot: 68
     click:
@@ -206,9 +232,9 @@ kits:
       volume: 0
       tempo: 130
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Seit j. Maerz
     slot: 69
     click:
@@ -217,9 +243,9 @@ kits:
       volume: 0
       tempo: 140
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Nachwuchs-Nazis
     slot: 70
     click:
@@ -228,9 +254,9 @@ kits:
       volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Maerchenwelt
     slot: 71
     click:
@@ -239,9 +265,9 @@ kits:
       volume: 0
       tempo: 150
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Alkohol
     slot: 72
     click:
@@ -250,9 +276,9 @@ kits:
       volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Hochseil
     slot: 73
     click:
@@ -261,9 +287,9 @@ kits:
       volume: 0
       tempo: 150
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Danke
     slot: 74
     click:
@@ -272,9 +298,9 @@ kits:
       volume: 0
       tempo: 110
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
   - name: Pop-Kommerz
     slot: 75
     click:
@@ -283,9 +309,9 @@ kits:
       volume: 0
       tempo: 140
       startPad: { from: 1, to: 1 }
-    padLinks:
-      - { padIndex: 0, tx: 1, rx: 0 }
-      - { padIndex: 1, tx: 0, rx: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
 setlists:
   - name: Heimspiel 2026
     slot: 31
@@ -316,3 +342,20 @@ setlists:
       - kit: Danke
       - kit: Pop-Kommerz
       - kit: Stille Helden
+waves:
+  - name: DA Intro
+    slot: 1554
+  - name: DA STILL HLDN KEY
+    slot: 1555
+  - name: da-stille-helden
+    slot: 1556
+  - name: da-stille-helden
+    slot: 1557
+  - name: WoodCabaseClick
+    slot: 1558
+  - name: thx
+    slot: 1559
+  - name: trumpet
+    slot: 1560
+  - name: war-sound
+    slot: 1561

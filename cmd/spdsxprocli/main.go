@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"go-spdsxpro"
+	spdsxpro "go-spdsxpro"
 	"go-spdsxpro/types"
 )
 
@@ -112,21 +112,68 @@ func run(configFile string) error {
 		}
 		log.Infof("Kit %d click pad start range set: %d", kitIdx, kit.Click.StartPad.To)
 
-		for _, padLink := range kit.PadLinks {
-			padIndex := padLink.PadIndex
+		for padIdx := range 9 {
+			pad := kit.GetPad(padIdx)
+			if pad == nil {
+				pad = internal.NewEmptyPad(padIdx)
+			}
 
-			err = client.SetKitPadLinkSend(kitIdx, padIndex, padLink.Tx)
+			if pad.LayerA.Wave == "" {
+				err = client.SetKitPadLayerLoop(kitIdx, padIdx, types.LayerA, "off")
+				if err != nil {
+					return err
+				}
+
+				err = client.SetKitPadLayerWave(kitIdx, padIdx, types.LayerA, 0)
+				if err != nil {
+					return err
+				}
+				log.Infof("Kit %d pad %d layer a wave set to off", kitIdx, padIdx)
+			} else {
+				wave, err := config.GetWaveByName(pad.LayerA.Wave)
+				if err != nil {
+					return err
+				}
+
+				err = client.SetKitPadLayerLoop(kitIdx, padIdx, types.LayerA, pad.LayerA.Loop)
+				if err != nil {
+					return err
+				}
+
+				err = client.SetKitPadLayerTriggerType(kitIdx, padIdx, types.LayerA, pad.LayerA.TriggerType)
+				if err != nil {
+					return err
+				}
+
+				err = client.SetKitPadLayerWave(kitIdx, padIdx, types.LayerA, *wave.Slot)
+				if err != nil {
+					return err
+				}
+
+				log.Infof("Kit %d pad %d layer a wave set to %s %d", kitIdx, padIdx, pad.LayerA.Wave, *wave.Slot)
+
+				err = client.SetKitPadLayerPoly(kitIdx, padIdx, types.LayerA, pad.LayerA.Poly)
+				if err != nil {
+					return err
+				}
+			}
+
+			err = client.SetKitPadDynamics(kitIdx, padIdx, pad.Dynamics != "off")
 			if err != nil {
 				return err
 			}
-			log.Infof("Kit %d pad link %d set tx: %d", kitIdx, padIndex, padLink.Tx)
 
-			err = client.SetKitPadLinkReceive(kitIdx, padIndex, padLink.Rx)
+			err = client.SetKitPadLinkSend(kitIdx, padIdx, pad.LinkSend)
 			if err != nil {
 				return err
 			}
-			log.Infof("Kit %d pad link %d set rx: %d", kitIdx, padIndex, padLink.Rx)
+			log.Infof("Kit %d pad %d to send %d", kitIdx, padIdx, pad.LinkSend)
 
+			err = client.SetKitPadLinkReceive(kitIdx, padIdx, pad.LinkReceive)
+			if err != nil {
+				return err
+			}
+			log.Infof("Kit %d pad %d to receive %d", kitIdx, padIdx, pad.LinkReceive)
 		}
 	}
 
@@ -146,8 +193,8 @@ func run(configFile string) error {
 		for stepIdx := 0; stepIdx < internal.SetlistMaxSteps; stepIdx++ {
 			if stepIdx < len(setlist.Steps) {
 				step := setlist.Steps[stepIdx]
-				referencedKit, found := config.GetKitByName(step.Kit)
-				if !found {
+				referencedKit, err := config.GetKitByName(step.Kit)
+				if err != nil {
 					return fmt.Errorf("kit %s not found", step.Kit)
 				}
 				err = client.SetSetlistStepKit(*setlistIdx, stepIdx, *referencedKit.Slot-1)

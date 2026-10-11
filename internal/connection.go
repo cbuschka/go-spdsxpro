@@ -71,7 +71,7 @@ func (c *Connection) TransceiveSysEx(msg []byte) ([]byte, error) {
 		}
 	}
 
-	log.Debugf("sending msg: %X", msg)
+	// log.Debugf("sending msg: %X", msg)
 
 	_ = c.dev.SetWriteDeadline(time.Now().Add(c.timeout))
 	if _, err := c.dev.Write(msg); err != nil {
@@ -96,7 +96,7 @@ func (conn *Connection) sendSysEx(msg []byte) error {
 		return fmt.Errorf("invalid end byte: expected 0xF7, got 0x%02X", msg[len(msg)-1])
 	}
 
-	log.Debugf("sending msg: %X", msg)
+	// log.Debugf("sending msg: %X", msg)
 
 	// 2. Write bytes out to the MIDI transport
 	n, err := conn.dev.Write(msg)
