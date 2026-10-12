@@ -337,8 +337,45 @@ kits:
     pads:
       - padIndex: 0
       - padIndex: 1
+  - name: In diesem Moment
+    slot: 77
+    click:
+      mode: 0
+      sound: 0
+      volume: 0
+      tempo: 120
+      startPad: { from: 1, to: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
 setlists:
   - name: Heimspiel 2026
+    slot: 30
+    steps:
+      - kit: Hey Junge
+      - kit: Unsere Zeit
+      - kit: Barbie
+      - kit: Hallo Spacko
+      - kit: Nein
+      - kit: Das System
+      - kit: Droge
+      - kit: Kat.S.8
+      - kit: Morgen
+      - kit: Seit j. Maerz
+      - kit: Fr.d.13.
+      - kit: In diesem Moment
+      - kit: Alkohol
+      - kit: Nachwuchs-Nazis
+      - kit: Wahre Freunde
+      - kit: Jeder gg jeden
+      - kit: Getrennte Wege
+      - kit: Danke
+      - kit: Schlag Dich selbst
+      - kit: Stille Helden
+      - kit: Diese Welt
+      - kit: Maerchenwelt
+      - kit: Schrei nach Liebe
+  - name: All
     slot: 31
     steps:
       - kit: Unsere Zeit
@@ -368,6 +405,7 @@ setlists:
       - kit: Pop-Kommerz
       - kit: Stille Helden
       - kit: Schrei nach Liebe
+      - kit: In diesem Moment
 waves:
   - name: DA Intro
     slot: 1554
