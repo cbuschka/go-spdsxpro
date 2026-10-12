@@ -326,6 +326,17 @@ kits:
     pads:
       - padIndex: 0
       - padIndex: 1
+  - name: Schrei nach Liebe
+    slot: 76
+    click:
+      mode: 0
+      sound: 0
+      volume: 0
+      tempo: 161
+      startPad: { from: 1, to: 1 }
+    pads:
+      - padIndex: 0
+      - padIndex: 1
 setlists:
   - name: Heimspiel 2026
     slot: 31
@@ -356,6 +367,7 @@ setlists:
       - kit: Danke
       - kit: Pop-Kommerz
       - kit: Stille Helden
+      - kit: Schrei nach Liebe
 waves:
   - name: DA Intro
     slot: 1554
