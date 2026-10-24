@@ -26,6 +26,8 @@ kits:
       volume: 0
       tempo: 160
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
         linkSend: 1
@@ -59,6 +61,8 @@ kits:
       volume: 0
       tempo: 182
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -70,6 +74,8 @@ kits:
       volume: 0
       tempo: 170
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -81,6 +87,8 @@ kits:
       volume: 0
       tempo: 140
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -92,6 +100,8 @@ kits:
       volume: 0
       tempo: 150
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     padLinks:
       - { padIndex: 0, tx: 1, rx: 0 }
       - { padIndex: 1, tx: 0, rx: 1 }
@@ -103,6 +113,8 @@ kits:
       volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -114,6 +126,8 @@ kits:
       volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -125,6 +139,8 @@ kits:
       volume: 0
       tempo: 140
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -136,6 +152,8 @@ kits:
       volume: 0
       tempo: 150
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -147,6 +165,8 @@ kits:
       volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     padLinks:
       - { padIndex: 0, tx: 1, rx: 0 }
       - { padIndex: 1, tx: 0, rx: 1 }
@@ -158,6 +178,8 @@ kits:
       volume: 0
       tempo: 140
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -169,6 +191,8 @@ kits:
       volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -180,6 +204,8 @@ kits:
       volume: 0
       tempo: 160
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -191,6 +217,8 @@ kits:
       volume: 0
       tempo: 145
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -202,6 +230,8 @@ kits:
       volume: 0
       tempo: 95
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -213,6 +243,8 @@ kits:
       volume: 0
       tempo: 100
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -224,6 +256,8 @@ kits:
       volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -235,6 +269,8 @@ kits:
       volume: 0
       tempo: 140
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -246,6 +282,8 @@ kits:
       volume: 0
       tempo: 130
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -257,6 +295,8 @@ kits:
       volume: 0
       tempo: 140
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -268,6 +308,8 @@ kits:
       volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -279,6 +321,8 @@ kits:
       volume: 0
       tempo: 150
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -290,6 +334,8 @@ kits:
       volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -301,6 +347,8 @@ kits:
       volume: 0
       tempo: 150
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -312,6 +360,8 @@ kits:
       volume: 0
       tempo: 110
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -323,6 +373,8 @@ kits:
       volume: 0
       tempo: 140
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -334,6 +386,8 @@ kits:
       volume: 0
       tempo: 161
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -345,6 +399,8 @@ kits:
       volume: 0
       tempo: 120
       startPad: { from: 1, to: 1 }
+      output: 1
+      directOutput: 1
     pads:
       - padIndex: 0
       - padIndex: 1
@@ -352,29 +408,24 @@ setlists:
   - name: Heimspiel 2026
     slot: 30
     steps:
-      - kit: Hey Junge
       - kit: Unsere Zeit
-      - kit: Barbie
       - kit: Hallo Spacko
-      - kit: Nein
+      - kit: Hey Junge
       - kit: Das System
-      - kit: Droge
+      - kit: Hochseil
       - kit: Kat.S.8
       - kit: Morgen
       - kit: Seit j. Maerz
+      - kit: Diese Welt
+      - kit: Barbie
+      - kit: Nein
       - kit: Fr.d.13.
-      - kit: In diesem Moment
-      - kit: Alkohol
-      - kit: Nachwuchs-Nazis
+      - kit: Droge
+      - kit: Schlag Dich selbst
       - kit: Wahre Freunde
+      - kit: Schrei nach Liebe
       - kit: Jeder gg jeden
       - kit: Getrennte Wege
-      - kit: Danke
-      - kit: Schlag Dich selbst
-      - kit: Stille Helden
-      - kit: Diese Welt
-      - kit: Maerchenwelt
-      - kit: Schrei nach Liebe
   - name: All
     slot: 31
     steps:
