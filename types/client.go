@@ -35,6 +35,10 @@ type Client interface {
 	SetKitClickSound(kitIdx int, mode int) error
 	GetKitClickVolume(kitIdx int) (int, error)
 	SetKitClickVolume(kitIdx int, volume int) error
+	GetKitClickOutput(kitIdx int) (int, error)
+	SetKitClickOutput(kitIdx int, output int) error
+	GetKitClickDirectOutput(kitIdx int) (int, error)
+	SetKitClickDirectOutput(kitIdx int, output int) error
 	GetSetlist(setlistIdx int) (*Setlist, error)
 	GetSetlistName(setlistIdx int) (string, error)
 	SetSetlistName(setlistIdx int, name string) error

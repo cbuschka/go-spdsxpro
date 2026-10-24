@@ -112,6 +112,19 @@ func run(configFile string) error {
 		}
 		log.Infof("Kit %d click pad start range set: %d", kitIdx, kit.Click.StartPad.To)
 
+		err = client.SetKitClickOutput(kitIdx, int(kit.Click.Output))
+		if err != nil {
+			return err
+		}
+		log.Infof("Kit click output set: %d %d", kitIdx, kit.Click.Output)
+
+		err = client.SetKitClickDirectOutput(kitIdx, int(kit.Click.DirectOutput))
+		if err != nil {
+			return err
+		}
+		log.Infof("Kit click direct output set: %d %d", kitIdx, kit.Click.DirectOutput)
+
+
 		for padIdx := range 9 {
 			pad := kit.GetPad(padIdx)
 			if pad == nil {

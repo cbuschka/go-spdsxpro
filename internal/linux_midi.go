@@ -51,6 +51,8 @@ const (
 	OffsetTempo                   = uint32(0x00000056) // 4-nibble 20.0-260.0 (200-2600)
 	OffsetPadLinkTx               = uint32(0x0000000C)
 	OffsetPadLinkRx               = uint32(0x0000000D)
+	OffsetClickOutput             = uint32(0x00000017)
+	OffsetClickDirectOutput       = uint32(0x00000018)
 )
 
 func (c *linuxMidiClient) parseActiveKitResponse(resp []byte) (int, error) {
@@ -1162,3 +1164,64 @@ func (c *linuxMidiClient) SetKitPadLayerTriggerType(kitIdx int, padIdx int, laye
 
 	return c.conn.sendSysEx(dt1Msg)
 }
+
+func (c *linuxMidiClient) SetKitClickOutput(kitIdx int, output int) error {
+	if output < 0 || output > 1 {
+		return fmt.Errorf("click output %d out of bounds (0..1", output)
+	}
+
+	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickOutput)
+	data := []byte{byte(output)}
+
+	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
+	return c.conn.sendSysEx(sysex)
+}
+
+func (c *linuxMidiClient) GetKitClickOutput(kitIdx int) (int, error) {
+	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickOutput)
+	size := []byte{0x00, 0x00, 0x00, 0x01}
+
+	sysex := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+	reply, err := c.conn.TransceiveSysEx(sysex)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(reply) < 16 {
+		return 0, fmt.Errorf("unexpected reply length: %d bytes", len(reply))
+	}
+
+	return int(reply[13]), nil
+}
+ 
+
+func (c *linuxMidiClient) SetKitClickDirectOutput(kitIdx int, directOutput int) error {
+	if directOutput < 0 || directOutput > 1 {
+		return fmt.Errorf("click direct output %d out of bounds (0..1", directOutput)
+	}
+
+	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickDirectOutput)
+	data := []byte{byte(directOutput)}
+
+	sysex := c.conn.encodeDT1(c.deviceID, ModelIDSPDSXPro, addr, data)
+	return c.conn.sendSysEx(sysex)
+}
+
+func (c *linuxMidiClient) GetKitClickDirectOutput(kitIdx int) (int, error) {
+	addr := c.getKitParamAddress(kitIdx, KitClick, OffsetClickDirectOutput)
+	size := []byte{0x00, 0x00, 0x00, 0x01}
+
+	sysex := encodeRQ1(c.deviceID, ModelIDSPDSXPro, addr, size)
+	reply, err := c.conn.TransceiveSysEx(sysex)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(reply) < 16 {
+		return 0, fmt.Errorf("unexpected reply length: %d bytes", len(reply))
+	}
+
+	return int(reply[13]), nil
+}
+ 
+
